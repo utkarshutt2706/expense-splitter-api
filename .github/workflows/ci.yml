@@ -33,6 +33,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm exec prisma generate
       - run: pnpm lint
 
   build:
@@ -47,6 +48,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm exec prisma generate
       - run: pnpm build
 
   test:
@@ -77,4 +79,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm exec prisma generate
+      - run: pnpm exec prisma migrate deploy
       - run: pnpm test --runInBand
