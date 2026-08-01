@@ -14,7 +14,8 @@ NestJS REST API for the Expense Splitter application.
 
 1. Install dependencies: `pnpm install`
 2. Copy `.env.example` to `.env` and fill in the values
-3. Start the app: `pnpm start:dev`
+3. Apply database migrations: `pnpm prisma:migrate:dev`
+4. Start the app: `pnpm start:dev`
 
 ## Environment variables
 
@@ -22,6 +23,7 @@ NestJS REST API for the Expense Splitter application.
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
 - `NODE_ENV`
+- `API_KEY` — shared secret the frontend must send on every request
 
 ## Deployment
 
@@ -31,12 +33,11 @@ Render deploy hook only after `CI` finishes successfully on `main` — Render's 
 "Auto-Deploy" setting for this service should stay **off**, otherwise every push
 triggers two independent deploys instead of one.
 
-Database migrations are not yet wired into this pipeline — there's no migration
-tooling or schema defined yet. Once one exists (e.g. `prisma migrate deploy` or a
-TypeORM migration command), configure it as Render's **Pre-Deploy Command** for this
-service, so it runs against Neon before each deploy goes live. Don't run migrations
-from GitHub Actions itself; Render's pre-deploy hook is the right place since it runs
-against the same environment the deploy is targeting.
+Schema migrations are managed with Prisma (`prisma/schema.prisma`,
+`prisma/migrations/`). Configure `pnpm prisma:migrate:deploy` as Render's **Pre-Deploy
+Command** for this service, so it runs against Neon before each deploy goes live.
+Don't run migrations from GitHub Actions itself; Render's pre-deploy hook is the right
+place since it runs against the same environment the deploy is targeting.
 
 ## Required repository secrets
 
