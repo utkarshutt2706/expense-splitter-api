@@ -5,6 +5,7 @@
   "author": "",
   "private": true,
   "license": "MIT",
+  "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=24"
   },
