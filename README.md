@@ -17,6 +17,14 @@ NestJS REST API for the Expense Splitter application.
 3. Apply database migrations: `pnpm prisma:migrate:dev`
 4. Start the app: `pnpm start:dev`
 
+## Authentication
+
+There's no per-user auth — the frontend already handles "who is this person" entirely
+client-side. Every request (except `/health`) must include the shared secret as an
+`x-api-key` header, matching the `API_KEY` environment variable. This exists only to
+keep the API from sitting fully open on the public internet; it does not distinguish
+between callers.
+
 ## Environment variables
 
 - `PORT`

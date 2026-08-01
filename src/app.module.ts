@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ApiKeyGuard } from './auth/api-key.guard';
 import { validateEnv } from './config/env.validation';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -13,6 +15,11 @@ import { PrismaModule } from './prisma/prisma.module';
         PrismaModule,
     ],
     controllers: [HealthController],
-    providers: [],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: ApiKeyGuard,
+        },
+    ],
 })
 export class AppModule {}
