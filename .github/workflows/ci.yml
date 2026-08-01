@@ -77,4 +77,4 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm test -- --runInBand
+      - run: pnpm test --runInBand
