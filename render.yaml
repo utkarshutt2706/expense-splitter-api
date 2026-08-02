@@ -5,8 +5,7 @@ services:
     plan: free
     region: singapore
     buildCommand: corepack enable && corepack prepare pnpm@11.17.0 --activate && pnpm install --frozen-lockfile && pnpm build
-    preDeployCommand: pnpm prisma:migrate:deploy
-    startCommand: node dist/main.js
+    startCommand: pnpm prisma:migrate:deploy && node dist/main.js
     autoDeployTrigger: off
     envVars:
       - key: NODE_ENV
