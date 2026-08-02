@@ -3,10 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { createDocsBasicAuthMiddleware } from './auth/docs-basic-auth.middleware';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { isOriginAllowed, parseAllowedOrigins } from './config/cors';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    app.useGlobalFilters(new HttpExceptionFilter());
 
     app.useGlobalPipes(
         new ValidationPipe({
