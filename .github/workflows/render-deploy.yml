@@ -17,6 +17,12 @@ jobs:
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_branch == 'main')
     steps:
+      - name: Verify deploy hook secret is configured
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set (or is empty) on this repository. Check Settings > Secrets and variables > Actions > Repository secrets."
+            exit 1
+          fi
       - name: Trigger Render deploy hook
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          curl --fail --silent --show-error -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
