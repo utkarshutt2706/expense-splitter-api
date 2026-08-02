@@ -1,9 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AddMemberDto } from './dto/add-member.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 type GroupWithMembers = Group & { members: GroupMember[] };
 
@@ -52,43 +52,25 @@ export class GroupsService {
         }
     }
 
-    async rename(id: string, name: string): Promise<GroupResponseDto> {
+    async update(id: string, dto: UpdateGroupDto): Promise<GroupResponseDto> {
+        await this.findOne(id);
+
         try {
-            const group = await this.prisma.group.update({
-                where: { id },
-                data: { name },
-                include: { members: true },
-            });
-            return this.toResponse(group);
+            if (dto.memberIds) {
+                await this.prisma.$transaction([
+                    this.prisma.groupMember.deleteMany({ where: { groupId: id } }),
+                    this.prisma.groupMember.createMany({
+                        data: dto.memberIds.map((userId) => ({ groupId: id, userId })),
+                    }),
+                ]);
+            }
+            if (dto.name !== undefined) {
+                await this.prisma.group.update({ where: { id }, data: { name: dto.name } });
+            }
         } catch (error) {
             throw this.mapPrismaError(error, id);
         }
-    }
 
-    async addMember(id: string, dto: AddMemberDto): Promise<GroupResponseDto> {
-        await this.findOne(id);
-        try {
-            await this.prisma.groupMember.create({
-                data: { groupId: id, userId: dto.userId },
-            });
-        } catch (error) {
-            throw this.mapMembershipError(error);
-        }
-        return this.findOne(id);
-    }
-
-    async removeMember(id: string, userId: string): Promise<GroupResponseDto> {
-        await this.findOne(id);
-        try {
-            await this.prisma.groupMember.delete({
-                where: { groupId_userId: { groupId: id, userId } },
-            });
-        } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException('User is not a member of this group');
-            }
-            throw error;
-        }
         return this.findOne(id);
     }
 
@@ -107,21 +89,9 @@ export class GroupsService {
                 return new NotFoundException(id ? `Group ${id} not found` : 'Group not found');
             }
             if (error.code === 'P2003') {
-                return new ConflictException(
+                return new BadRequestException(
                     'One or more memberIds do not reference an existing user',
                 );
-            }
-        }
-        return error instanceof Error ? error : new Error('Unexpected error');
-    }
-
-    private mapMembershipError(error: unknown): Error {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            if (error.code === 'P2002') {
-                return new ConflictException('User is already a member of this group');
-            }
-            if (error.code === 'P2003') {
-                return new NotFoundException('User not found');
             }
         }
         return error instanceof Error ? error : new Error('Unexpected error');

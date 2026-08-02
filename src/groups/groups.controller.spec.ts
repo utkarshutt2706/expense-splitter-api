@@ -7,9 +7,7 @@ type MockedGroupsService = {
     findAll: jest.Mock;
     findOne: jest.Mock;
     remove: jest.Mock;
-    rename: jest.Mock;
-    addMember: jest.Mock;
-    removeMember: jest.Mock;
+    update: jest.Mock;
 };
 
 describe('GroupsController', () => {
@@ -29,9 +27,7 @@ describe('GroupsController', () => {
             findAll: jest.fn(),
             findOne: jest.fn(),
             remove: jest.fn(),
-            rename: jest.fn(),
-            addMember: jest.fn(),
-            removeMember: jest.fn(),
+            update: jest.fn(),
         };
         controller = new GroupsController(groupsService as unknown as GroupsService);
     });
@@ -64,27 +60,13 @@ describe('GroupsController', () => {
         expect(groupsService.remove).toHaveBeenCalledWith('group-1');
     });
 
-    it('delegates rename to the service', async () => {
-        groupsService.rename.mockResolvedValue({ ...group, name: 'New Name' });
+    it('delegates update to the service', async () => {
+        groupsService.update.mockResolvedValue({ ...group, name: 'New Name' });
 
-        await expect(controller.rename('group-1', { name: 'New Name' })).resolves.toMatchObject({
+        const dto = { name: 'New Name', memberIds: ['user-1'] };
+        await expect(controller.update('group-1', dto)).resolves.toMatchObject({
             name: 'New Name',
         });
-        expect(groupsService.rename).toHaveBeenCalledWith('group-1', 'New Name');
-    });
-
-    it('delegates addMember to the service', async () => {
-        groupsService.addMember.mockResolvedValue(group);
-
-        const dto = { userId: 'user-3' };
-        await expect(controller.addMember('group-1', dto)).resolves.toEqual(group);
-        expect(groupsService.addMember).toHaveBeenCalledWith('group-1', dto);
-    });
-
-    it('delegates removeMember to the service', async () => {
-        groupsService.removeMember.mockResolvedValue(group);
-
-        await expect(controller.removeMember('group-1', 'user-2')).resolves.toEqual(group);
-        expect(groupsService.removeMember).toHaveBeenCalledWith('group-1', 'user-2');
+        expect(groupsService.update).toHaveBeenCalledWith('group-1', dto);
     });
 });
