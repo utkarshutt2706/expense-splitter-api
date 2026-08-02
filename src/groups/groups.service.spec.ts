@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from './groups.service';
@@ -21,9 +21,10 @@ describe('GroupsService', () => {
             delete: jest.Mock;
         };
         groupMember: {
-            create: jest.Mock;
-            delete: jest.Mock;
+            deleteMany: jest.Mock;
+            createMany: jest.Mock;
         };
+        $transaction: jest.Mock;
     };
 
     const createdAt = new Date('2026-07-01T00:00:00.000Z');
@@ -48,9 +49,10 @@ describe('GroupsService', () => {
                 delete: jest.fn(),
             },
             groupMember: {
-                create: jest.fn(),
-                delete: jest.fn(),
+                deleteMany: jest.fn(),
+                createMany: jest.fn(),
             },
+            $transaction: jest.fn(),
         };
         service = new GroupsService(prisma as unknown as PrismaService);
     });
@@ -69,12 +71,12 @@ describe('GroupsService', () => {
             });
         });
 
-        it('throws ConflictException when a memberId does not reference a user', async () => {
+        it('throws BadRequestException when a memberId does not reference a user', async () => {
             prisma.group.create.mockRejectedValue(knownRequestError('P2003'));
 
             await expect(
                 service.create({ name: 'Daaru Party', memberIds: ['missing-user'] }),
-            ).rejects.toThrow(ConflictException);
+            ).rejects.toThrow(BadRequestException);
         });
 
         it('rethrows unrecognized errors unchanged', async () => {
@@ -129,102 +131,85 @@ describe('GroupsService', () => {
         });
     });
 
-    describe('rename', () => {
-        it('renames a group', async () => {
-            const renamed = { ...group, name: 'New Name' };
-            prisma.group.update.mockResolvedValue(renamed);
-
-            await expect(service.rename('group-1', 'New Name')).resolves.toMatchObject({
-                name: 'New Name',
-            });
+    describe('update', () => {
+        beforeEach(() => {
+            prisma.group.findUnique.mockResolvedValue(group);
+            prisma.$transaction.mockResolvedValue(undefined);
         });
 
         it('throws NotFoundException when the group does not exist', async () => {
-            prisma.group.update.mockRejectedValue(knownRequestError('P2025'));
+            prisma.group.findUnique.mockResolvedValue(null);
 
-            await expect(service.rename('missing', 'New Name')).rejects.toThrow(NotFoundException);
-        });
-    });
-
-    describe('addMember', () => {
-        beforeEach(() => {
-            prisma.group.findUnique.mockResolvedValue(group);
+            await expect(service.update('missing', { name: 'New Name' })).rejects.toThrow(
+                NotFoundException,
+            );
         });
 
-        it('adds a member and returns the updated group', async () => {
-            prisma.groupMember.create.mockResolvedValue(members[0]);
+        it('renames the group without touching membership', async () => {
+            prisma.group.update.mockResolvedValue(group);
 
-            const result = service.addMember('group-1', { userId: 'user-3' });
+            await service.update('group-1', { name: 'New Name' });
+
+            expect(prisma.group.update).toHaveBeenCalledWith({
+                where: { id: 'group-1' },
+                data: { name: 'New Name' },
+            });
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('replaces membership without touching the name', async () => {
+            await service.update('group-1', { memberIds: ['user-3', 'user-4'] });
+
+            expect(prisma.groupMember.deleteMany).toHaveBeenCalledWith({
+                where: { groupId: 'group-1' },
+            });
+            expect(prisma.groupMember.createMany).toHaveBeenCalledWith({
+                data: [
+                    { groupId: 'group-1', userId: 'user-3' },
+                    { groupId: 'group-1', userId: 'user-4' },
+                ],
+            });
+            expect(prisma.$transaction).toHaveBeenCalled();
+            expect(prisma.group.update).not.toHaveBeenCalled();
+        });
+
+        it('updates both name and membership together', async () => {
+            prisma.group.update.mockResolvedValue(group);
+
+            await service.update('group-1', { name: 'New Name', memberIds: ['user-3'] });
+
+            expect(prisma.$transaction).toHaveBeenCalled();
+            expect(prisma.group.update).toHaveBeenCalled();
+        });
+
+        it('re-fetches the group when given an empty update', async () => {
+            const result = service.update('group-1', {});
 
             await expect(result).resolves.toMatchObject({ id: 'group-1' });
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+            expect(prisma.group.update).not.toHaveBeenCalled();
         });
 
-        it('throws NotFoundException when the group does not exist', async () => {
-            prisma.group.findUnique.mockResolvedValue(null);
+        it('throws BadRequestException when a replacement memberId is invalid', async () => {
+            prisma.$transaction.mockRejectedValue(knownRequestError('P2003'));
 
-            await expect(service.addMember('missing', { userId: 'user-1' })).rejects.toThrow(
-                NotFoundException,
-            );
+            const result = service.update('group-1', { memberIds: ['missing-user'] });
+
+            await expect(result).rejects.toThrow(BadRequestException);
         });
 
-        it('throws ConflictException when the user is already a member', async () => {
-            prisma.groupMember.create.mockRejectedValue(knownRequestError('P2002'));
+        it('throws NotFoundException when the group is deleted mid-update', async () => {
+            prisma.group.update.mockRejectedValue(knownRequestError('P2025'));
 
-            await expect(service.addMember('group-1', { userId: 'user-1' })).rejects.toThrow(
-                ConflictException,
-            );
-        });
-
-        it('throws NotFoundException when the user does not exist', async () => {
-            prisma.groupMember.create.mockRejectedValue(knownRequestError('P2003'));
-
-            await expect(service.addMember('group-1', { userId: 'missing-user' })).rejects.toThrow(
+            await expect(service.update('group-1', { name: 'New Name' })).rejects.toThrow(
                 NotFoundException,
             );
         });
 
         it('rethrows unrecognized errors unchanged', async () => {
-            prisma.groupMember.create.mockRejectedValue(new Error('boom'));
+            prisma.group.update.mockRejectedValue(new Error('boom'));
 
-            await expect(service.addMember('group-1', { userId: 'user-1' })).rejects.toThrow(
-                'boom',
-            );
-        });
-    });
-
-    describe('removeMember', () => {
-        beforeEach(() => {
-            prisma.group.findUnique.mockResolvedValue(group);
-        });
-
-        it('removes a member and returns the updated group', async () => {
-            prisma.groupMember.delete.mockResolvedValue(members[0]);
-
-            await expect(service.removeMember('group-1', 'user-1')).resolves.toMatchObject({
-                id: 'group-1',
-            });
-        });
-
-        it('throws NotFoundException when the group does not exist', async () => {
-            prisma.group.findUnique.mockResolvedValue(null);
-
-            await expect(service.removeMember('missing', 'user-1')).rejects.toThrow(
-                NotFoundException,
-            );
-        });
-
-        it('throws NotFoundException when the user is not a member', async () => {
-            prisma.groupMember.delete.mockRejectedValue(knownRequestError('P2025'));
-
-            await expect(service.removeMember('group-1', 'not-a-member')).rejects.toThrow(
-                NotFoundException,
-            );
-        });
-
-        it('rethrows unrecognized errors unchanged', async () => {
-            prisma.groupMember.delete.mockRejectedValue(new Error('boom'));
-
-            await expect(service.removeMember('group-1', 'user-1')).rejects.toThrow('boom');
+            await expect(service.update('group-1', { name: 'New Name' })).rejects.toThrow('boom');
         });
     });
 });
