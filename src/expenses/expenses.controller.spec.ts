@@ -6,6 +6,9 @@ import { ExpensesService } from './expenses.service';
 type MockedExpensesService = {
     create: jest.Mock;
     findAllByGroup: jest.Mock;
+    findOne: jest.Mock;
+    update: jest.Mock;
+    remove: jest.Mock;
 };
 
 describe('ExpensesController', () => {
@@ -27,6 +30,9 @@ describe('ExpensesController', () => {
         expensesService = {
             create: jest.fn(),
             findAllByGroup: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
         };
         controller = new ExpensesController(expensesService as unknown as ExpensesService);
     });
@@ -50,5 +56,34 @@ describe('ExpensesController', () => {
 
         await expect(controller.findAllByGroup('group-1')).resolves.toEqual([expense]);
         expect(expensesService.findAllByGroup).toHaveBeenCalledWith('group-1');
+    });
+
+    it('delegates findOne to the service', async () => {
+        expensesService.findOne.mockResolvedValue(expense);
+
+        await expect(controller.findOne('group-1', 'expense-1')).resolves.toEqual(expense);
+        expect(expensesService.findOne).toHaveBeenCalledWith('group-1', 'expense-1');
+    });
+
+    it('delegates update to the service', async () => {
+        const updated = { ...expense, description: 'Daaru (updated)' };
+        expensesService.update.mockResolvedValue(updated);
+
+        const dto = {
+            description: 'Daaru (updated)',
+            amount: 5200,
+            paidByUserId: 'friend-divanshu',
+            splitType: SplitType.equal,
+            splits: [{ userId: 'user-1', amount: 1040 }],
+        };
+        await expect(controller.update('group-1', 'expense-1', dto)).resolves.toEqual(updated);
+        expect(expensesService.update).toHaveBeenCalledWith('group-1', 'expense-1', dto);
+    });
+
+    it('delegates remove to the service', async () => {
+        expensesService.remove.mockResolvedValue(undefined);
+
+        await expect(controller.remove('group-1', 'expense-1')).resolves.toBeUndefined();
+        expect(expensesService.remove).toHaveBeenCalledWith('group-1', 'expense-1');
     });
 });
