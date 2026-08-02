@@ -353,9 +353,7 @@ describe('ExpensesService', () => {
         it('throws NotFoundException when not found in the group', async () => {
             prisma.expense.findFirst.mockResolvedValue(null);
 
-            await expect(service.findOne('group-1', 'missing')).rejects.toThrow(
-                NotFoundException,
-            );
+            await expect(service.findOne('group-1', 'missing')).rejects.toThrow(NotFoundException);
         });
     });
 
@@ -376,9 +374,9 @@ describe('ExpensesService', () => {
         it('throws NotFoundException when the expense does not exist in the group', async () => {
             prisma.expense.findFirst.mockResolvedValue(null);
 
-            await expect(
-                service.update('group-1', 'missing', existingDto),
-            ).rejects.toThrow(NotFoundException);
+            await expect(service.update('group-1', 'missing', existingDto)).rejects.toThrow(
+                NotFoundException,
+            );
             expect(prisma.$transaction).not.toHaveBeenCalled();
         });
 
@@ -432,17 +430,17 @@ describe('ExpensesService', () => {
         it('maps a foreign key violation on persist to BadRequestException', async () => {
             prisma.$transaction.mockRejectedValue(knownRequestError('P2003'));
 
-            await expect(
-                service.update('group-1', 'expense-1', existingDto),
-            ).rejects.toThrow(BadRequestException);
+            await expect(service.update('group-1', 'expense-1', existingDto)).rejects.toThrow(
+                BadRequestException,
+            );
         });
 
         it('maps a not-found race condition to NotFoundException', async () => {
             prisma.$transaction.mockRejectedValue(knownRequestError('P2025'));
 
-            await expect(
-                service.update('group-1', 'expense-1', existingDto),
-            ).rejects.toThrow(NotFoundException);
+            await expect(service.update('group-1', 'expense-1', existingDto)).rejects.toThrow(
+                NotFoundException,
+            );
         });
 
         it('rethrows unrecognized persist errors unchanged', async () => {
@@ -470,9 +468,7 @@ describe('ExpensesService', () => {
         it('throws NotFoundException when the expense does not exist in the group', async () => {
             prisma.expense.findFirst.mockResolvedValue(null);
 
-            await expect(service.remove('group-1', 'missing')).rejects.toThrow(
-                NotFoundException,
-            );
+            await expect(service.remove('group-1', 'missing')).rejects.toThrow(NotFoundException);
             expect(prisma.expense.delete).not.toHaveBeenCalled();
         });
 
@@ -487,9 +483,7 @@ describe('ExpensesService', () => {
         it('maps a not-found race condition to NotFoundException', async () => {
             prisma.expense.delete.mockRejectedValue(knownRequestError('P2025'));
 
-            await expect(service.remove('group-1', 'expense-1')).rejects.toThrow(
-                NotFoundException,
-            );
+            await expect(service.remove('group-1', 'expense-1')).rejects.toThrow(NotFoundException);
         });
 
         it('rethrows unrecognized delete errors unchanged', async () => {
