@@ -142,9 +142,7 @@ describe('GroupsService', () => {
         it('throws NotFoundException when the group does not exist', async () => {
             prisma.group.update.mockRejectedValue(knownRequestError('P2025'));
 
-            await expect(service.rename('missing', 'New Name')).rejects.toThrow(
-                NotFoundException,
-            );
+            await expect(service.rename('missing', 'New Name')).rejects.toThrow(NotFoundException);
         });
     });
 
