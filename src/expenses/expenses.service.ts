@@ -3,6 +3,7 @@ import { Expense, ExpenseSplit, Prisma, SplitType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 import {
     Split,
     calculateEqualSplit,
@@ -59,6 +60,57 @@ export class ExpensesService {
             orderBy: { createdAt: 'asc' },
         });
         return expenses.map((expense) => this.toResponse(expense));
+    }
+
+    async findOne(groupId: string, id: string): Promise<ExpenseResponseDto> {
+        const expense = await this.prisma.expense.findFirst({
+            where: { id, groupId },
+            include: { splits: true },
+        });
+        if (!expense) {
+            throw new NotFoundException(`Expense ${id} not found in group ${groupId}`);
+        }
+        return this.toResponse(expense);
+    }
+
+    async update(groupId: string, id: string, dto: UpdateExpenseDto): Promise<ExpenseResponseDto> {
+        await this.findOne(groupId, id);
+        this.validateSplits(dto);
+
+        try {
+            await this.prisma.$transaction([
+                this.prisma.expenseSplit.deleteMany({ where: { expenseId: id } }),
+                this.prisma.expense.update({
+                    where: { id },
+                    data: {
+                        description: dto.description,
+                        amount: dto.amount,
+                        paidByUserId: dto.paidByUserId,
+                        splitType: dto.splitType,
+                        splits: {
+                            create: dto.splits.map((split) => ({
+                                userId: split.userId,
+                                amount: split.amount,
+                            })),
+                        },
+                    },
+                }),
+            ]);
+        } catch (error) {
+            throw this.mapPrismaError(error, id);
+        }
+
+        return this.findOne(groupId, id);
+    }
+
+    async remove(groupId: string, id: string): Promise<void> {
+        await this.findOne(groupId, id);
+
+        try {
+            await this.prisma.expense.delete({ where: { id } });
+        } catch (error) {
+            throw this.mapPrismaError(error, id);
+        }
     }
 
     private validateSplits(dto: CreateExpenseDto): void {
@@ -131,11 +183,16 @@ export class ExpensesService {
         };
     }
 
-    private mapPrismaError(error: unknown): Error {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-            return new BadRequestException(
-                'paidByUserId or a split userId does not reference an existing user',
-            );
+    private mapPrismaError(error: unknown, id?: string): Error {
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            if (error.code === 'P2003') {
+                return new BadRequestException(
+                    'paidByUserId or a split userId does not reference an existing user',
+                );
+            }
+            if (error.code === 'P2025') {
+                return new NotFoundException(id ? `Expense ${id} not found` : 'Expense not found');
+            }
         }
         return error instanceof Error ? error : new Error('Unexpected error');
     }

@@ -19,7 +19,15 @@ describe('ExpensesService', () => {
     let service: ExpensesService;
     let prisma: {
         group: { findUnique: jest.Mock };
-        expense: { create: jest.Mock; findMany: jest.Mock };
+        expense: {
+            create: jest.Mock;
+            findMany: jest.Mock;
+            findFirst: jest.Mock;
+            update: jest.Mock;
+            delete: jest.Mock;
+        };
+        expenseSplit: { deleteMany: jest.Mock };
+        $transaction: jest.Mock;
     };
 
     const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
@@ -27,7 +35,15 @@ describe('ExpensesService', () => {
     beforeEach(() => {
         prisma = {
             group: { findUnique: jest.fn() },
-            expense: { create: jest.fn(), findMany: jest.fn() },
+            expense: {
+                create: jest.fn(),
+                findMany: jest.fn(),
+                findFirst: jest.fn(),
+                update: jest.fn(),
+                delete: jest.fn(),
+            },
+            expenseSplit: { deleteMany: jest.fn() },
+            $transaction: jest.fn(),
         };
         service = new ExpensesService(prisma as unknown as PrismaService);
         prisma.group.findUnique.mockResolvedValue(group);
@@ -311,6 +327,175 @@ describe('ExpensesService', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].amount).toBe(100);
+        });
+    });
+
+    describe('findOne', () => {
+        it('returns the expense when found in the group', async () => {
+            const dto: CreateExpenseDto = {
+                description: 'Daaru',
+                amount: 100,
+                paidByUserId: 'user-1',
+                splitType: SplitType.equal,
+                splits: [{ userId: 'user-1', amount: 100 }],
+            };
+            prisma.expense.findFirst.mockResolvedValue(persistedExpense(dto));
+
+            const result = await service.findOne('group-1', 'expense-1');
+
+            expect(result.id).toBe('expense-1');
+            expect(prisma.expense.findFirst).toHaveBeenCalledWith({
+                where: { id: 'expense-1', groupId: 'group-1' },
+                include: { splits: true },
+            });
+        });
+
+        it('throws NotFoundException when not found in the group', async () => {
+            prisma.expense.findFirst.mockResolvedValue(null);
+
+            await expect(service.findOne('group-1', 'missing')).rejects.toThrow(
+                NotFoundException,
+            );
+        });
+    });
+
+    describe('update', () => {
+        const existingDto: CreateExpenseDto = {
+            description: 'Daaru',
+            amount: 100,
+            paidByUserId: 'user-1',
+            splitType: SplitType.equal,
+            splits: [{ userId: 'user-1', amount: 100 }],
+        };
+
+        beforeEach(() => {
+            prisma.expense.findFirst.mockResolvedValue(persistedExpense(existingDto));
+            prisma.$transaction.mockResolvedValue(undefined);
+        });
+
+        it('throws NotFoundException when the expense does not exist in the group', async () => {
+            prisma.expense.findFirst.mockResolvedValue(null);
+
+            await expect(
+                service.update('group-1', 'missing', existingDto),
+            ).rejects.toThrow(NotFoundException);
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('rejects an updated split that does not reconcile', async () => {
+            const badDto: CreateExpenseDto = {
+                ...existingDto,
+                splits: [{ userId: 'user-1', amount: 50 }],
+            };
+
+            await expect(service.update('group-1', 'expense-1', badDto)).rejects.toThrow(
+                BadRequestException,
+            );
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('replaces the splits and updates the expense atomically', async () => {
+            const newDto: CreateExpenseDto = {
+                description: 'Daaru (updated)',
+                amount: 200,
+                paidByUserId: 'user-2',
+                splitType: SplitType.equal,
+                splits: [
+                    { userId: 'a', amount: 100 },
+                    { userId: 'b', amount: 100 },
+                ],
+            };
+
+            await service.update('group-1', 'expense-1', newDto);
+
+            expect(prisma.expenseSplit.deleteMany).toHaveBeenCalledWith({
+                where: { expenseId: 'expense-1' },
+            });
+            expect(prisma.expense.update).toHaveBeenCalledWith({
+                where: { id: 'expense-1' },
+                data: {
+                    description: 'Daaru (updated)',
+                    amount: 200,
+                    paidByUserId: 'user-2',
+                    splitType: SplitType.equal,
+                    splits: {
+                        create: [
+                            { userId: 'a', amount: 100 },
+                            { userId: 'b', amount: 100 },
+                        ],
+                    },
+                },
+            });
+            expect(prisma.$transaction).toHaveBeenCalled();
+        });
+
+        it('maps a foreign key violation on persist to BadRequestException', async () => {
+            prisma.$transaction.mockRejectedValue(knownRequestError('P2003'));
+
+            await expect(
+                service.update('group-1', 'expense-1', existingDto),
+            ).rejects.toThrow(BadRequestException);
+        });
+
+        it('maps a not-found race condition to NotFoundException', async () => {
+            prisma.$transaction.mockRejectedValue(knownRequestError('P2025'));
+
+            await expect(
+                service.update('group-1', 'expense-1', existingDto),
+            ).rejects.toThrow(NotFoundException);
+        });
+
+        it('rethrows unrecognized persist errors unchanged', async () => {
+            prisma.$transaction.mockRejectedValue(new Error('boom'));
+
+            await expect(service.update('group-1', 'expense-1', existingDto)).rejects.toThrow(
+                'boom',
+            );
+        });
+    });
+
+    describe('remove', () => {
+        const existingDto: CreateExpenseDto = {
+            description: 'Daaru',
+            amount: 100,
+            paidByUserId: 'user-1',
+            splitType: SplitType.equal,
+            splits: [{ userId: 'user-1', amount: 100 }],
+        };
+
+        beforeEach(() => {
+            prisma.expense.findFirst.mockResolvedValue(persistedExpense(existingDto));
+        });
+
+        it('throws NotFoundException when the expense does not exist in the group', async () => {
+            prisma.expense.findFirst.mockResolvedValue(null);
+
+            await expect(service.remove('group-1', 'missing')).rejects.toThrow(
+                NotFoundException,
+            );
+            expect(prisma.expense.delete).not.toHaveBeenCalled();
+        });
+
+        it('deletes the expense', async () => {
+            prisma.expense.delete.mockResolvedValue(undefined);
+
+            await service.remove('group-1', 'expense-1');
+
+            expect(prisma.expense.delete).toHaveBeenCalledWith({ where: { id: 'expense-1' } });
+        });
+
+        it('maps a not-found race condition to NotFoundException', async () => {
+            prisma.expense.delete.mockRejectedValue(knownRequestError('P2025'));
+
+            await expect(service.remove('group-1', 'expense-1')).rejects.toThrow(
+                NotFoundException,
+            );
+        });
+
+        it('rethrows unrecognized delete errors unchanged', async () => {
+            prisma.expense.delete.mockRejectedValue(new Error('boom'));
+
+            await expect(service.remove('group-1', 'expense-1')).rejects.toThrow('boom');
         });
     });
 });
