@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './auth/api-key.guard';
 import { validateEnv } from './config/env.validation';
+import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module';
         PrismaModule,
         UsersModule,
         GroupsModule,
+        ExpensesModule,
     ],
     controllers: [HealthController],
     providers: [
