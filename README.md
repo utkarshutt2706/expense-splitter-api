@@ -25,6 +25,14 @@ client-side. Every request (except `/health`) must include the shared secret as 
 keep the API from sitting fully open on the public internet; it does not distinguish
 between callers.
 
+## API documentation
+
+Interactive Swagger docs are served at `/docs` (and the raw spec at `/docs-json`).
+Since Swagger's routes are mounted outside Nest's normal request pipeline, they aren't
+covered by the `x-api-key` guard — instead `/docs` is gated by HTTP Basic Auth, using
+the `API_KEY` value as the password (username is ignored). Browsers will prompt for
+credentials automatically on first visit.
+
 ## Environment variables
 
 - `PORT`

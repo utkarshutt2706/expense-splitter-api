@@ -1,18 +1,19 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
+import { EnvConfig } from '../config/env.validation';
 import { ApiKeyGuard } from './api-key.guard';
 
 describe('ApiKeyGuard', () => {
     const API_KEY = 'a-sufficiently-long-secret';
 
     let reflector: Reflector;
-    let configService: ConfigService;
+    let configService: ConfigService<EnvConfig, true>;
     let guard: ApiKeyGuard;
 
     beforeEach(() => {
         reflector = new Reflector();
-        configService = { get: () => API_KEY } as unknown as ConfigService;
+        configService = { get: () => API_KEY } as unknown as ConfigService<EnvConfig, true>;
         guard = new ApiKeyGuard(reflector, configService);
     });
 
