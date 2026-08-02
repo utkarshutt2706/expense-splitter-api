@@ -43,19 +43,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const body = exception.getResponse();
 
         if (typeof body === 'string') {
-            return body;
+            return this.capitalizeFirstLetter(body);
         }
 
         if (typeof body === 'object' && body !== null && 'message' in body) {
             const message = body.message;
+
             if (Array.isArray(message)) {
-                return message.join('; ');
+                return message.map((item) => this.capitalizeFirstLetter(String(item))).join('; ');
             }
+
             if (typeof message === 'string') {
-                return message;
+                return this.capitalizeFirstLetter(message);
             }
         }
 
-        return exception.message;
+        return this.capitalizeFirstLetter(exception.message);
+    }
+
+    private capitalizeFirstLetter(message: string): string {
+        const trimmedMessage = message.trim();
+
+        if (!trimmedMessage) {
+            return trimmedMessage;
+        }
+
+        return trimmedMessage.charAt(0).toUpperCase() + trimmedMessage.slice(1);
     }
 }
