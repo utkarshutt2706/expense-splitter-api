@@ -1,10 +1,10 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { timingSafeEqual } from 'node:crypto';
 import { Request } from 'express';
 import { EnvConfig } from '../config/env.validation';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { timingSafeCompare } from './timing-safe-compare';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -26,21 +26,10 @@ export class ApiKeyGuard implements CanActivate {
         const providedKey = request.header('x-api-key');
         const expectedKey = this.configService.get('API_KEY', { infer: true });
 
-        if (!providedKey || !this.safeCompare(providedKey, expectedKey)) {
+        if (!providedKey || !timingSafeCompare(providedKey, expectedKey)) {
             throw new UnauthorizedException('Invalid or missing API key');
         }
 
         return true;
-    }
-
-    private safeCompare(a: string, b: string): boolean {
-        const bufferA = Buffer.from(a);
-        const bufferB = Buffer.from(b);
-
-        if (bufferA.length !== bufferB.length) {
-            return false;
-        }
-
-        return timingSafeEqual(bufferA, bufferB);
     }
 }
