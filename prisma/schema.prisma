@@ -7,11 +7,12 @@ datasource db {
 }
 
 model User {
-  id        String  @id @default(uuid())
-  name      String
-  email     String? @unique
-  phone     String? @unique
-  avatarUrl String?
+  id           String  @id @default(uuid())
+  name         String
+  email        String? @unique
+  phone        String? @unique
+  avatarUrl    String?
+  passwordHash String?
 
   groupMemberships GroupMember[]
   expensesPaid     Expense[]      @relation("ExpensePaidBy")

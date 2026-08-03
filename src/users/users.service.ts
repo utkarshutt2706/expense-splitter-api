@@ -4,32 +4,41 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+export type PublicUser = Omit<User, 'passwordHash'>;
+
 @Injectable()
 export class UsersService {
     constructor(private readonly prisma: PrismaService) {}
 
-    create(dto: CreateUserDto): Promise<User> {
-        return this.prisma.user.create({ data: dto }).catch((error: unknown) => {
-            throw this.mapPrismaError(error);
+    create(dto: CreateUserDto): Promise<PublicUser> {
+        return this.prisma.user
+            .create({ data: dto, omit: { passwordHash: true } })
+            .catch((error: unknown) => {
+                throw this.mapPrismaError(error);
+            });
+    }
+
+    findAll(): Promise<PublicUser[]> {
+        return this.prisma.user.findMany({ omit: { passwordHash: true } });
+    }
+
+    async findOne(id: string): Promise<PublicUser> {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+            omit: { passwordHash: true },
         });
-    }
-
-    findAll(): Promise<User[]> {
-        return this.prisma.user.findMany();
-    }
-
-    async findOne(id: string): Promise<User> {
-        const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user) {
             throw new NotFoundException(`User ${id} not found`);
         }
         return user;
     }
 
-    update(id: string, dto: UpdateUserDto): Promise<User> {
-        return this.prisma.user.update({ where: { id }, data: dto }).catch((error: unknown) => {
-            throw this.mapPrismaError(error, id);
-        });
+    update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
+        return this.prisma.user
+            .update({ where: { id }, data: dto, omit: { passwordHash: true } })
+            .catch((error: unknown) => {
+                throw this.mapPrismaError(error, id);
+            });
     }
 
     remove(id: string): Promise<User> {

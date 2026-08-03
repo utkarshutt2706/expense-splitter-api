@@ -9,32 +9,31 @@ import {
     Patch,
     Post,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UsersService } from './users.service';
+import { PublicUser, UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
     @Post()
-    create(@Body() dto: CreateUserDto): Promise<User> {
+    create(@Body() dto: CreateUserDto): Promise<PublicUser> {
         return this.usersService.create(dto);
     }
 
     @Get()
-    findAll(): Promise<User[]> {
+    findAll(): Promise<PublicUser[]> {
         return this.usersService.findAll();
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string): Promise<User> {
+    findOne(@Param('id') id: string): Promise<PublicUser> {
         return this.usersService.findOne(id);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<User> {
+    update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<PublicUser> {
         return this.usersService.update(id, dto);
     }
 

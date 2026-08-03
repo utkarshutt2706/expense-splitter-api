@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './auth/api-key.guard';
+import { AuthModule } from './auth/auth.module';
 import { BalancesModule } from './balances/balances.module';
 import { validateEnv } from './config/env.validation';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module';
             validate: validateEnv,
         }),
         PrismaModule,
+        AuthModule,
         UsersModule,
         GroupsModule,
         ExpensesModule,
