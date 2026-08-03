@@ -2,8 +2,8 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { RequestWithUser } from '../interfaces/request-with-user.interface';
+import { JwtPayload } from '../jwt-payload';
 
 const BEARER_PREFIX = 'Bearer ';
 

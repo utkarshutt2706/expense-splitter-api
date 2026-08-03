@@ -11,6 +11,7 @@ import { Response } from 'express';
 const STATUS_TO_CODE: Partial<Record<number, string>> = {
     [HttpStatus.BAD_REQUEST]: 'VALIDATION_ERROR',
     [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
+    [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
     [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
     [HttpStatus.CONFLICT]: 'CONFLICT',
 };

@@ -2,6 +2,7 @@ import {
     ArgumentsHost,
     BadRequestException,
     ConflictException,
+    ForbiddenException,
     HttpException,
     HttpStatus,
     NotFoundException,
@@ -69,6 +70,17 @@ describe('HttpExceptionFilter', () => {
 
         expect(res.json).toHaveBeenCalledWith({
             error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' },
+        });
+    });
+
+    it('maps ForbiddenException to a FORBIDDEN error', () => {
+        const res = mockResponse();
+
+        filter.catch(new ForbiddenException('you are not a member of this group'), mockHost(res));
+
+        expect(res.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+        expect(res.json).toHaveBeenCalledWith({
+            error: { code: 'FORBIDDEN', message: 'You are not a member of this group' },
         });
     });
 

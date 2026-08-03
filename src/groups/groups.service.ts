@@ -11,13 +11,15 @@ type GroupWithMembers = Group & { members: GroupMember[] };
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(dto: CreateGroupDto): Promise<GroupResponseDto> {
+    async create(creatorUserId: string, dto: CreateGroupDto): Promise<GroupResponseDto> {
+        const memberIds = Array.from(new Set([creatorUserId, ...dto.memberIds]));
+
         try {
             const group = await this.prisma.group.create({
                 data: {
                     name: dto.name,
                     members: {
-                        create: dto.memberIds.map((userId) => ({ userId })),
+                        create: memberIds.map((userId) => ({ userId })),
                     },
                 },
                 include: { members: true },
@@ -28,8 +30,11 @@ export class GroupsService {
         }
     }
 
-    async findAll(): Promise<GroupResponseDto[]> {
-        const groups = await this.prisma.group.findMany({ include: { members: true } });
+    async findAll(userId: string): Promise<GroupResponseDto[]> {
+        const groups = await this.prisma.group.findMany({
+            where: { members: { some: { userId } } },
+            include: { members: true },
+        });
         return groups.map((group) => this.toResponse(group));
     }
 
