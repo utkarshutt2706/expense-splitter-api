@@ -123,9 +123,7 @@ describe('Expense journey (e2e)', () => {
     });
 
     it('rejects an unauthenticated request with 401', async () => {
-        const response = await request(app.getHttpServer())
-            .get(`/groups/${groupId}`)
-            .expect(401);
+        const response = await request(app.getHttpServer()).get(`/groups/${groupId}`).expect(401);
 
         expect((response.body as { error: { code: string } }).error.code).toBe('UNAUTHORIZED');
     });
