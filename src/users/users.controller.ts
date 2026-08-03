@@ -11,8 +11,9 @@ import {
     Post,
     Query,
 } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtPayload } from '../common/jwt-payload';
 import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
@@ -25,26 +26,90 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
     @Get('lookup')
+    @ApiOperation({
+        summary: 'Find a registered user by exact email or phone',
+        description:
+            'Exactly one of email/phone must be provided. Used to decide between adding an ' +
+            'already-registered user directly, or inviting an unregistered email to a group.',
+    })
+    @ApiResponse({ status: 200, description: 'A user matches.' })
+    @ApiResponse({
+        status: 400,
+        description: 'Neither or both of email/phone were provided.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 404,
+        description: 'No registered user matches.',
+        type: ErrorResponseDto,
+    })
     lookup(@Query() dto: LookupUserDto): Promise<PublicUser> {
         return this.usersService.lookup(dto);
     }
 
     @Get('me/friends')
+    @ApiOperation({
+        summary: "List the caller's friends",
+        description:
+            'Derived, not stored: every user the caller has ever shared a group with (bidirectional, ' +
+            'deduplicated, survives being removed from the group later).',
+    })
+    @ApiResponse({ status: 200, description: 'The friend list (may be empty).' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
     findFriends(@CurrentUser() user: JwtPayload): Promise<PublicUser[]> {
         return this.usersService.findFriends(user.sub);
     }
 
     @Post('batch')
+    @ApiOperation({
+        summary: 'Resolve multiple user ids to display-ready profiles',
+        description:
+            "Used to resolve a group's memberIds or an expense split's userIds to names/avatars. " +
+            'Unknown ids are silently omitted, not an error.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Users matching the given ids (order not guaranteed).',
+    })
+    @ApiResponse({
+        status: 400,
+        description: 'ids was empty or not an array of strings.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
     findManyByIds(@Body() dto: BatchLookupUsersDto): Promise<PublicUser[]> {
         return this.usersService.findManyByIds(dto);
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get a user by id' })
+    @ApiResponse({ status: 200, description: 'The user.' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({ status: 404, description: 'No user with that id.', type: ErrorResponseDto })
     findOne(@Param('id') id: string): Promise<PublicUser> {
         return this.usersService.findOne(id);
     }
 
     @Patch(':id')
+    @ApiOperation({
+        summary: "Update the caller's own account",
+        description: 'Partial update -- send only the fields you want to change. Self only.',
+    })
+    @ApiResponse({ status: 200, description: 'Updated user.' })
+    @ApiResponse({ status: 400, description: 'Validation error.', type: ErrorResponseDto })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 403,
+        description: 'id does not match the caller.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({ status: 404, description: 'No user with that id.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 409,
+        description: 'The new email/phone is already used by another user.',
+        type: ErrorResponseDto,
+    })
     update(
         @CurrentUser() user: JwtPayload,
         @Param('id') id: string,
@@ -56,6 +121,20 @@ export class UsersController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: "Delete the caller's own account", description: 'Self only.' })
+    @ApiResponse({ status: 204, description: 'Deleted.' })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 403,
+        description: 'id does not match the caller.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({ status: 404, description: 'No user with that id.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 409,
+        description: 'The user is referenced by an existing group or expense.',
+        type: ErrorResponseDto,
+    })
     async remove(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
         this.assertSelf(user, id);
         await this.usersService.remove(id);

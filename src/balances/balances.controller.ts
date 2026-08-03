@@ -1,5 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { BalancesService } from './balances.service';
 import { GroupBalancesResponseDto } from './dto/group-balances-response.dto';
@@ -11,6 +12,24 @@ export class BalancesController {
     constructor(private readonly balancesService: BalancesService) {}
 
     @Get()
+    @ApiOperation({
+        summary: 'Get net balances and a minimal settlement plan for a group',
+        description:
+            'settlements is the Simplify Debt-minimized transaction list -- the fewest payments ' +
+            'needed to bring every member to zero, not a raw pairwise ledger.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Balances and settlements.',
+        type: GroupBalancesResponseDto,
+    })
+    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 403,
+        description: 'The caller is not a member of this group.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({ status: 404, description: 'No group with that id.', type: ErrorResponseDto })
     getGroupBalances(@Param('groupId') groupId: string): Promise<GroupBalancesResponseDto> {
         return this.balancesService.getGroupBalances(groupId);
     }
