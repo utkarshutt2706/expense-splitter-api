@@ -8,14 +8,17 @@ import {
     Param,
     Patch,
     Post,
+    UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesService } from './expenses.service';
 
 @ApiBearerAuth('access-token')
+@UseGuards(GroupMembershipGuard)
 @Controller('groups/:groupId/expenses')
 export class ExpensesController {
     constructor(private readonly expensesService: ExpensesService) {}

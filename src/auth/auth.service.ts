@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { JwtPayload } from '../common/jwt-payload';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';

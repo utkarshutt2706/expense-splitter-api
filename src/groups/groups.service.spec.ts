@@ -62,7 +62,7 @@ describe('GroupsService', () => {
             prisma.group.create.mockResolvedValue(group);
 
             await expect(
-                service.create({ name: 'Daaru Party', memberIds: ['user-1', 'user-2'] }),
+                service.create('user-1', { name: 'Daaru Party', memberIds: ['user-1', 'user-2'] }),
             ).resolves.toEqual({
                 id: 'group-1',
                 name: 'Daaru Party',
@@ -71,11 +71,44 @@ describe('GroupsService', () => {
             });
         });
 
+        it('adds the creator to memberIds when they omitted themselves', async () => {
+            prisma.group.create.mockResolvedValue(group);
+
+            await service.create('user-1', { name: 'Daaru Party', memberIds: ['user-2'] });
+
+            expect(prisma.group.create).toHaveBeenCalledWith({
+                data: {
+                    name: 'Daaru Party',
+                    members: {
+                        create: [{ userId: 'user-1' }, { userId: 'user-2' }],
+                    },
+                },
+                include: { members: true },
+            });
+        });
+
+        it('does not duplicate the creator when already present in memberIds', async () => {
+            prisma.group.create.mockResolvedValue(group);
+
+            const dto = { name: 'Daaru Party', memberIds: ['user-1', 'user-2'] };
+            await service.create('user-1', dto);
+
+            const createMock = prisma.group.create as jest.Mock<
+                unknown,
+                [{ data: { members: { create: { userId: string }[] } } }]
+            >;
+            const createArgs = createMock.mock.calls[0][0];
+            expect(createArgs.data.members.create).toEqual([
+                { userId: 'user-1' },
+                { userId: 'user-2' },
+            ]);
+        });
+
         it('throws BadRequestException when a memberId does not reference a user', async () => {
             prisma.group.create.mockRejectedValue(knownRequestError('P2003'));
 
             await expect(
-                service.create({ name: 'Daaru Party', memberIds: ['missing-user'] }),
+                service.create('user-1', { name: 'Daaru Party', memberIds: ['missing-user'] }),
             ).rejects.toThrow(BadRequestException);
         });
 
@@ -83,16 +116,16 @@ describe('GroupsService', () => {
             prisma.group.create.mockRejectedValue(new Error('boom'));
 
             await expect(
-                service.create({ name: 'Daaru Party', memberIds: ['user-1'] }),
+                service.create('user-1', { name: 'Daaru Party', memberIds: ['user-1'] }),
             ).rejects.toThrow('boom');
         });
     });
 
     describe('findAll', () => {
-        it('returns all groups mapped to memberIds', async () => {
+        it("returns only the caller's groups mapped to memberIds", async () => {
             prisma.group.findMany.mockResolvedValue([group]);
 
-            await expect(service.findAll()).resolves.toEqual([
+            await expect(service.findAll('user-1')).resolves.toEqual([
                 {
                     id: 'group-1',
                     name: 'Daaru Party',
@@ -100,6 +133,10 @@ describe('GroupsService', () => {
                     createdAt: createdAt.toISOString(),
                 },
             ]);
+            expect(prisma.group.findMany).toHaveBeenCalledWith({
+                where: { members: { some: { userId: 'user-1' } } },
+                include: { members: true },
+            });
         });
     });
 
