@@ -2,8 +2,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { createDocsBasicAuthMiddleware } from './auth/docs-basic-auth.middleware';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { createDocsBasicAuthMiddleware } from './common/middleware/docs-basic-auth.middleware';
 import { isOriginAllowed, parseAllowedOrigins } from './config/cors';
 
 async function bootstrap() {
