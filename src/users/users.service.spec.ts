@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicUser, UsersService } from './users.service';
@@ -18,11 +18,13 @@ describe('UsersService', () => {
     let service: UsersService;
     let prisma: {
         user: {
-            create: jest.Mock;
             findMany: jest.Mock;
             findUnique: jest.Mock;
             update: jest.Mock;
             delete: jest.Mock;
+        };
+        groupMember: {
+            findMany: jest.Mock;
         };
     };
 
@@ -37,42 +39,16 @@ describe('UsersService', () => {
     beforeEach(() => {
         prisma = {
             user: {
-                create: jest.fn(),
                 findMany: jest.fn(),
                 findUnique: jest.fn(),
                 update: jest.fn(),
                 delete: jest.fn(),
             },
+            groupMember: {
+                findMany: jest.fn(),
+            },
         };
         service = new UsersService(prisma as unknown as PrismaService);
-    });
-
-    describe('create', () => {
-        it('creates a user', async () => {
-            prisma.user.create.mockResolvedValue(user);
-
-            await expect(service.create({ name: 'Utkarsh' })).resolves.toEqual(user);
-        });
-
-        it('throws ConflictException on a unique constraint violation', async () => {
-            prisma.user.create.mockRejectedValue(knownRequestError('P2002', { target: ['email'] }));
-
-            await expect(service.create({ name: 'Utkarsh' })).rejects.toThrow(ConflictException);
-        });
-
-        it('rethrows unrecognized errors unchanged', async () => {
-            prisma.user.create.mockRejectedValue(new Error('boom'));
-
-            await expect(service.create({ name: 'Utkarsh' })).rejects.toThrow('boom');
-        });
-    });
-
-    describe('findAll', () => {
-        it('returns all users', async () => {
-            prisma.user.findMany.mockResolvedValue([user]);
-
-            await expect(service.findAll()).resolves.toEqual([user]);
-        });
     });
 
     describe('findOne', () => {
@@ -86,6 +62,78 @@ describe('UsersService', () => {
             prisma.user.findUnique.mockResolvedValue(null);
 
             await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+        });
+    });
+
+    describe('lookup', () => {
+        it('throws BadRequestException when both email and phone are given', async () => {
+            await expect(service.lookup({ email: 'a@example.com', phone: '123' })).rejects.toThrow(
+                BadRequestException,
+            );
+        });
+
+        it('throws BadRequestException when neither email nor phone is given', async () => {
+            await expect(service.lookup({})).rejects.toThrow(BadRequestException);
+        });
+
+        it('finds a user by email', async () => {
+            prisma.user.findUnique.mockResolvedValue(user);
+
+            await expect(service.lookup({ email: 'utkarsh@example.com' })).resolves.toEqual(user);
+            expect(prisma.user.findUnique).toHaveBeenCalledWith({
+                where: { email: 'utkarsh@example.com' },
+                omit: { passwordHash: true },
+            });
+        });
+
+        it('finds a user by phone', async () => {
+            prisma.user.findUnique.mockResolvedValue(user);
+
+            await expect(service.lookup({ phone: '9876543210' })).resolves.toEqual(user);
+            expect(prisma.user.findUnique).toHaveBeenCalledWith({
+                where: { phone: '9876543210' },
+                omit: { passwordHash: true },
+            });
+        });
+
+        it('throws NotFoundException when no user matches', async () => {
+            prisma.user.findUnique.mockResolvedValue(null);
+
+            await expect(service.lookup({ email: 'nobody@example.com' })).rejects.toThrow(
+                NotFoundException,
+            );
+        });
+    });
+
+    describe('findFriends', () => {
+        it('returns an empty list when the user has no groups', async () => {
+            prisma.groupMember.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+            prisma.user.findMany.mockResolvedValue([]);
+
+            await expect(service.findFriends('user-1')).resolves.toEqual([]);
+        });
+
+        it('returns other members of shared groups, deduped and excluding self', async () => {
+            prisma.groupMember.findMany
+                .mockResolvedValueOnce([{ groupId: 'group-1' }, { groupId: 'group-2' }])
+                .mockResolvedValueOnce([{ userId: 'user-2' }, { userId: 'user-3' }]);
+            prisma.user.findMany.mockResolvedValue([
+                { ...user, id: 'user-2' },
+                { ...user, id: 'user-3' },
+            ]);
+
+            const result = await service.findFriends('user-1');
+
+            expect(prisma.groupMember.findMany).toHaveBeenNthCalledWith(1, {
+                where: { userId: 'user-1' },
+                select: { groupId: true },
+            });
+            expect(prisma.groupMember.findMany).toHaveBeenNthCalledWith(2, {
+                where: { groupId: { in: ['group-1', 'group-2'] }, userId: { not: 'user-1' } },
+                select: { userId: true },
+                distinct: ['userId'],
+            });
+            expect(result.map((u) => u.id)).toEqual(['user-2', 'user-3']);
         });
     });
 
