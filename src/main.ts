@@ -27,7 +27,6 @@ async function bootstrap() {
         .setDescription('REST API for the Expense Splitter application')
         .setVersion('0.0.1')
         .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
-        .addSecurityRequirements('access-token')
         .build();
     const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('docs', app, swaggerDocument);
