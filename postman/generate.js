@@ -212,8 +212,42 @@ const registerItem = item(
             409,
             { error: { code: 'CONFLICT', message: 'A user with this email already exists' } },
         ),
+        example(
+            '201 Created - registering through a group invitation',
+            req('POST', '/auth/register', {
+                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
+                noAuth: true,
+            }),
+            'Created',
+            201,
+            { user: authUserResponse(), accessToken: '{{accessToken}}' },
+        ),
+        example(
+            '400 Bad Request - email does not match the invitation',
+            req('POST', '/auth/register', {
+                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
+                noAuth: true,
+            }),
+            'Bad Request',
+            400,
+            { error: { code: 'VALIDATION_ERROR', message: 'Email does not match the invitation' } },
+        ),
+        example(
+            '409 Conflict - invitation is expired, revoked, or already accepted',
+            req('POST', '/auth/register', {
+                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
+                noAuth: true,
+            }),
+            'Conflict',
+            409,
+            { error: { code: 'CONFLICT', message: 'This invitation is no longer valid' } },
+        ),
     ],
-    'Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a public user plus a ready-to-use accessToken. Saved as a Test script on this request to auto-populate the `accessToken` collection variable.',
+    'Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a ' +
+        'public user plus a ready-to-use accessToken. `inviteToken` is optional -- when present (taken ' +
+        'from the `?invite=` query param on the registration link emailed by Invitations > Create), ' +
+        'registration atomically also joins the invited group and marks the invitation accepted. ' +
+        'Saved as a Test script on this request to auto-populate the `accessToken` collection variable.',
 );
 registerItem.event = [captureAccessTokenScript];
 
@@ -257,60 +291,83 @@ const authFolder = {
 // =====================================================================
 // Users
 // =====================================================================
-const newUserBody = {
-    name: 'New Friend',
-    email: 'new.friend@example.com',
-    phone: '9000000001',
-};
-const invalidUserBody = { email: 'not-an-email' };
-const duplicateUserBody = { name: 'Someone Else', email: USERS.current.email };
-
 const usersFolder = {
     name: 'Users',
     description:
-        'Friends CRUD. email/phone are optional but must be unique across users when provided.',
+        'There is no way to manually create a user record or list every registered user -- every ' +
+        'account comes from Auth > Register (directly or via an accepted invitation). Use Lookup to ' +
+        'find a specific registered user by exact email/phone, or My friends to list users you share ' +
+        'a group with. PATCH/DELETE only work on your own account (self-ownership enforced, 403 ' +
+        'otherwise).',
     item: [
         item(
-            'Create user',
-            req('POST', '/users', { body: newUserBody }),
+            'Lookup user by email or phone',
+            req('GET', '/users/lookup?email=' + encodeURIComponent(USERS.abhay.email)),
             [
                 example(
-                    '201 Created',
-                    req('POST', '/users', { body: newUserBody }),
-                    'Created',
-                    201,
-                    { id: '{{$guid}}', ...newUserBody, avatarUrl: null },
+                    '200 OK - found by email',
+                    req('GET', '/users/lookup?email=' + encodeURIComponent(USERS.abhay.email)),
+                    'OK',
+                    200,
+                    USERS.abhay,
                 ),
                 example(
-                    '400 Validation Error - malformed fields',
-                    req('POST', '/users', { body: invalidUserBody }),
+                    '200 OK - found by phone',
+                    req('GET', '/users/lookup?phone=' + encodeURIComponent(USERS.abhay.phone)),
+                    'OK',
+                    200,
+                    USERS.abhay,
+                ),
+                example(
+                    '400 Bad Request - both email and phone provided',
+                    req(
+                        'GET',
+                        '/users/lookup?email=' +
+                            encodeURIComponent(USERS.abhay.email) +
+                            '&phone=' +
+                            encodeURIComponent(USERS.abhay.phone),
+                    ),
                     'Bad Request',
                     400,
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'Email must be an email; Name must be a string',
+                            message: 'Provide only one of email or phone, not both',
                         },
                     },
                 ),
                 example(
-                    '409 Conflict - email already in use',
-                    req('POST', '/users', { body: duplicateUserBody }),
-                    'Conflict',
-                    409,
-                    { error: { code: 'CONFLICT', message: 'A user with this email already exists' } },
+                    '404 Not Found - no registered user matches',
+                    req('GET', '/users/lookup?email=nobody%40example.com'),
+                    'Not Found',
+                    404,
+                    {
+                        error: {
+                            code: 'NOT_FOUND',
+                            message: 'No registered user matches that email or phone',
+                        },
+                    },
                 ),
-                unauthorizedExample('/users', 'POST', newUserBody),
+                unauthorizedExample('/users/lookup?email=' + encodeURIComponent(USERS.abhay.email), 'GET'),
             ],
-            'name is required. email/phone are optional but rejected with 409 if already used by another user.',
+            'Exact match only -- used by the frontend when a searched email/phone isn\'t already in the ' +
+                'caller\'s friend list, to decide between "add directly" (found) and "invite by email" (not found).',
         ),
         item(
-            'List users',
-            req('GET', '/users'),
+            'My friends',
+            req('GET', '/users/me/friends'),
             [
-                example('200 OK', req('GET', '/users'), 'OK', 200, Object.values(USERS)),
-                unauthorizedExample('/users', 'GET'),
+                example(
+                    '200 OK',
+                    req('GET', '/users/me/friends'),
+                    'OK',
+                    200,
+                    [USERS.abhay, USERS.divanshu],
+                ),
+                unauthorizedExample('/users/me/friends', 'GET'),
             ],
+            'Derived, not stored: every user the caller has ever shared a group with (bidirectional, ' +
+                'deduplicated, survives being removed from the group later).',
         ),
         item(
             'Get user by id',
@@ -367,8 +424,15 @@ const usersFolder = {
                     { error: { code: 'CONFLICT', message: 'A user with this email already exists' } },
                 ),
                 unauthorizedExample('/users/{{userId}}', 'PATCH', { name: 'Utkarsh S.' }),
+                example(
+                    '403 Forbidden - not your own account',
+                    req('PATCH', '/users/{{userId}}', { body: { name: 'Utkarsh S.' } }),
+                    'Forbidden',
+                    403,
+                    { error: { code: 'FORBIDDEN', message: 'You can only modify your own account' } },
+                ),
             ],
-            'Partial update -- send only the fields you want to change.',
+            'Partial update -- send only the fields you want to change. Self only: {{userId}} must match the caller.',
         ),
         item(
             'Delete user',
@@ -395,8 +459,15 @@ const usersFolder = {
                     },
                 ),
                 unauthorizedExample('/users/{{userId}}', 'DELETE'),
+                example(
+                    '403 Forbidden - not your own account',
+                    req('DELETE', '/users/{{userId}}'),
+                    'Forbidden',
+                    403,
+                    { error: { code: 'FORBIDDEN', message: 'You can only modify your own account' } },
+                ),
             ],
-            'Blocked with 409 if the user has paid for or split any expense, or sent/received a payment.',
+            'Blocked with 409 if the user has paid for or split any expense, or sent/received a payment. Self only: {{userId}} must match the caller.',
         ),
     ],
 };
@@ -543,6 +614,110 @@ const groupsFolder = {
                 forbiddenExample('/groups/{{groupId}}', 'DELETE'),
             ],
             'Cascades: deletes the group\'s memberships, expenses, expense splits, and payments too.',
+        ),
+    ],
+};
+
+// =====================================================================
+// Invitations
+// =====================================================================
+const inviteEmail = 'not.registered.yet@example.com';
+const invitationResponse = (overrides = {}) => ({
+    id: '{{$guid}}',
+    groupId: GROUP_ID,
+    email: inviteEmail,
+    status: 'pending',
+    expiresAt: '{{$isoTimestamp}}',
+    ...overrides,
+});
+
+const invitationsFolder = {
+    name: 'Invitations',
+    description:
+        'Invite an email that is not yet registered to join a group. The raw token is never returned ' +
+        'by the API -- it only goes out in the invite email (`${FRONTEND_URL}/register?invite=<token>`), ' +
+        'so treat `{{inviteToken}}` below as something you copy from that link/log, not from a response body.',
+    item: [
+        item(
+            'Create invitation',
+            req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
+            [
+                example(
+                    '201 Created',
+                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
+                    'Created',
+                    201,
+                    invitationResponse(),
+                ),
+                example(
+                    '200 OK - a pending invitation for this email already exists (idempotent)',
+                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
+                    'OK',
+                    200,
+                    invitationResponse(),
+                ),
+                example(
+                    '400 Validation Error - malformed email',
+                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: 'not-an-email' } }),
+                    'Bad Request',
+                    400,
+                    { error: { code: 'VALIDATION_ERROR', message: 'Email must be an email' } },
+                ),
+                example(
+                    '409 Conflict - email already belongs to a registered user',
+                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: USERS.abhay.email } }),
+                    'Conflict',
+                    409,
+                    {
+                        error: {
+                            code: 'CONFLICT',
+                            message:
+                                'A user with this email is already registered -- add them to the group directly instead of inviting',
+                        },
+                    },
+                ),
+                example(
+                    '409 Conflict - email already an active member of this group',
+                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: USERS.divanshu.email } }),
+                    'Conflict',
+                    409,
+                    { error: { code: 'CONFLICT', message: 'This email is already a member of the group' } },
+                ),
+                unauthorizedExample('/groups/{{groupId}}/invitations', 'POST', { email: inviteEmail }),
+                forbiddenExample('/groups/{{groupId}}/invitations', 'POST', { email: inviteEmail }),
+            ],
+            'Only for emails that are not yet registered. If the email already belongs to a registered ' +
+                'user, look them up via Users > Lookup and add them directly with Groups > Update instead.',
+        ),
+        item(
+            'Validate invitation token',
+            req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
+            [
+                example(
+                    '200 OK',
+                    req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
+                    'OK',
+                    200,
+                    { email: inviteEmail, group: { id: GROUP_ID, name: 'Daaru Party' } },
+                ),
+                example(
+                    '404 Not Found - token does not match any invitation',
+                    req('GET', '/invitations/not-a-real-token', { noAuth: true }),
+                    'Not Found',
+                    404,
+                    { error: { code: 'NOT_FOUND', message: 'Invitation not found' } },
+                ),
+                example(
+                    '409 Conflict - expired, revoked, or already accepted',
+                    req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
+                    'Conflict',
+                    409,
+                    { error: { code: 'CONFLICT', message: 'This invitation is no longer valid' } },
+                ),
+            ],
+            'Public -- no token required to call this endpoint (the invitation token itself is the ' +
+                'credential). The frontend calls this when the registration page loads with `?invite=` in ' +
+                'the URL, to show which group/email the invite is for before the person registers.',
         ),
     ],
 };
@@ -1070,12 +1245,20 @@ const collection = {
         { key: 'userId', value: USERS.current.id, type: 'string' },
         { key: 'expenseId', value: '', type: 'string', description: 'Set after creating/listing an expense' },
         { key: 'paymentId', value: '', type: 'string', description: 'Set after creating/listing a payment' },
+        {
+            key: 'inviteToken',
+            value: '',
+            type: 'string',
+            description:
+                'Copy from the invite link/log after Invitations > Create -- never returned in a response body',
+        },
     ],
     item: [
         healthFolder,
         authFolder,
         usersFolder,
         groupsFolder,
+        invitationsFolder,
         expensesFolder,
         paymentsFolder,
         balancesFolder,

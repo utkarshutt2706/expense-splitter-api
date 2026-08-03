@@ -47,6 +47,12 @@
             "value": "",
             "type": "string",
             "description": "Set after creating/listing a payment"
+        },
+        {
+            "key": "inviteToken",
+            "value": "",
+            "type": "string",
+            "description": "Copy from the invite link/log after Invitations > Create -- never returned in a response body"
         }
     ],
     "item": [
@@ -154,7 +160,7 @@
                         "auth": {
                             "type": "noauth"
                         },
-                        "description": "Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a public user plus a ready-to-use accessToken. Saved as a Test script on this request to auto-populate the `accessToken` collection variable."
+                        "description": "Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a public user plus a ready-to-use accessToken. `inviteToken` is optional -- when present (taken from the `?invite=` query param on the registration link emailed by Invitations > Create), registration atomically also joins the invited group and marks the invitation accepted. Saved as a Test script on this request to auto-populate the `accessToken` collection variable."
                     },
                     "response": [
                         {
@@ -291,6 +297,141 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"A user with this email already exists\"\n    }\n}"
+                        },
+                        {
+                            "name": "201 Created - registering through a group invitation",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/auth/register",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "register"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "Created",
+                            "code": 201,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"user\": {\n        \"id\": \"{{$guid}}\",\n        \"name\": \"New Friend\",\n        \"email\": \"new.friend@example.com\",\n        \"phone\": \"9000000001\",\n        \"avatarUrl\": null\n    },\n    \"accessToken\": \"{{accessToken}}\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request - email does not match the invitation",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/auth/register",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "register"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "Bad Request",
+                            "code": 400,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Email does not match the invitation\"\n    }\n}"
+                        },
+                        {
+                            "name": "409 Conflict - invitation is expired, revoked, or already accepted",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/auth/register",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "register"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This invitation is no longer valid\"\n    }\n}"
                         }
                     ],
                     "event": [
@@ -457,12 +598,12 @@
         },
         {
             "name": "Users",
-            "description": "Friends CRUD. email/phone are optional but must be unique across users when provided.",
+            "description": "There is no way to manually create a user record or list every registered user -- every account comes from Auth > Register (directly or via an accepted invitation). Use Lookup to find a specific registered user by exact email/phone, or My friends to list users you share a group with. PATCH/DELETE only work on your own account (self-ownership enforced, 403 otherwise).",
             "item": [
                 {
-                    "name": "Create user",
+                    "name": "Lookup user by email or phone",
                     "request": {
-                        "method": "POST",
+                        "method": "GET",
                         "header": [
                             {
                                 "key": "Content-Type",
@@ -470,30 +611,22 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{baseUrl}}/users",
+                            "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "users"
+                                "users",
+                                "lookup?email=abhay.verma%40example.com"
                             ]
                         },
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "description": "name is required. email/phone are optional but rejected with 409 if already used by another user."
+                        "description": "Exact match only -- used by the frontend when a searched email/phone isn't already in the caller's friend list, to decide between \"add directly\" (found) and \"invite by email\" (not found)."
                     },
                     "response": [
                         {
-                            "name": "201 Created",
+                            "name": "200 OK - found by email",
                             "originalRequest": {
-                                "method": "POST",
+                                "method": "GET",
                                 "header": [
                                     {
                                         "key": "Content-Type",
@@ -501,26 +634,18 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "lookup?email=abhay.verma%40example.com"
                                     ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
                                 }
                             },
-                            "status": "Created",
-                            "code": 201,
+                            "status": "OK",
+                            "code": 200,
                             "_postman_previewlanguage": "json",
                             "header": [
                                 {
@@ -529,12 +654,12 @@
                                 }
                             ],
                             "cookie": [],
-                            "body": "{\n    \"id\": \"{{$guid}}\",\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"avatarUrl\": null\n}"
+                            "body": "{\n    \"id\": \"friend-abhay\",\n    \"name\": \"Abhay\",\n    \"email\": \"abhay.verma@example.com\",\n    \"phone\": \"9876543210\",\n    \"avatarUrl\": null\n}"
                         },
                         {
-                            "name": "400 Validation Error - malformed fields",
+                            "name": "200 OK - found by phone",
                             "originalRequest": {
-                                "method": "POST",
+                                "method": "GET",
                                 "header": [
                                     {
                                         "key": "Content-Type",
@@ -542,22 +667,47 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/lookup?phone=9876543210",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "lookup?phone=9876543210"
                                     ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not-an-email\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": \"friend-abhay\",\n    \"name\": \"Abhay\",\n    \"email\": \"abhay.verma@example.com\",\n    \"phone\": \"9876543210\",\n    \"avatarUrl\": null\n}"
+                        },
+                        {
+                            "name": "400 Bad Request - both email and phone provided",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
                                     }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com&phone=9876543210",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "lookup?email=abhay.verma%40example.com&phone=9876543210"
+                                    ]
                                 }
                             },
                             "status": "Bad Request",
@@ -570,12 +720,12 @@
                                 }
                             ],
                             "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Email must be an email; Name must be a string\"\n    }\n}"
+                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Provide only one of email or phone, not both\"\n    }\n}"
                         },
                         {
-                            "name": "409 Conflict - email already in use",
+                            "name": "404 Not Found - no registered user matches",
                             "originalRequest": {
-                                "method": "POST",
+                                "method": "GET",
                                 "header": [
                                     {
                                         "key": "Content-Type",
@@ -583,26 +733,18 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/lookup?email=nobody%40example.com",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "lookup?email=nobody%40example.com"
                                     ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"Someone Else\",\n    \"email\": \"utkarshutt2706@gmail.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
                                 }
                             },
-                            "status": "Conflict",
-                            "code": 409,
+                            "status": "Not Found",
+                            "code": 404,
                             "_postman_previewlanguage": "json",
                             "header": [
                                 {
@@ -611,12 +753,12 @@
                                 }
                             ],
                             "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"A user with this email already exists\"\n    }\n}"
+                            "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"No registered user matches that email or phone\"\n    }\n}"
                         },
                         {
                             "name": "401 Unauthorized - missing/invalid token",
                             "originalRequest": {
-                                "method": "POST",
+                                "method": "GET",
                                 "header": [
                                     {
                                         "key": "Content-Type",
@@ -624,22 +766,14 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "lookup?email=abhay.verma%40example.com"
                                     ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -667,7 +801,7 @@
                     ]
                 },
                 {
-                    "name": "List users",
+                    "name": "My friends",
                     "request": {
                         "method": "GET",
                         "header": [
@@ -677,14 +811,17 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{baseUrl}}/users",
+                            "raw": "{{baseUrl}}/users/me/friends",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "users"
+                                "users",
+                                "me",
+                                "friends"
                             ]
-                        }
+                        },
+                        "description": "Derived, not stored: every user the caller has ever shared a group with (bidirectional, deduplicated, survives being removed from the group later)."
                     },
                     "response": [
                         {
@@ -698,12 +835,14 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/me/friends",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "me",
+                                        "friends"
                                     ]
                                 }
                             },
@@ -717,7 +856,7 @@
                                 }
                             ],
                             "cookie": [],
-                            "body": "[\n    {\n        \"id\": \"current-user\",\n        \"name\": \"Utkarsh Srivastava\",\n        \"email\": \"utkarshutt2706@gmail.com\",\n        \"phone\": \"9935744820\",\n        \"avatarUrl\": null\n    },\n    {\n        \"id\": \"friend-abhay\",\n        \"name\": \"Abhay\",\n        \"email\": \"abhay.verma@example.com\",\n        \"phone\": \"9876543210\",\n        \"avatarUrl\": null\n    },\n    {\n        \"id\": \"friend-divanshu\",\n        \"name\": \"Divanshu\",\n        \"email\": \"divanshu.gupta@example.com\",\n        \"phone\": \"9123456780\",\n        \"avatarUrl\": null\n    },\n    {\n        \"id\": \"friend-abhinav\",\n        \"name\": \"Abhinav\",\n        \"email\": \"abhinav.singh@example.com\",\n        \"phone\": \"9988776655\",\n        \"avatarUrl\": null\n    },\n    {\n        \"id\": \"friend-khem\",\n        \"name\": \"Khem\",\n        \"email\": \"khem.chandra@example.com\",\n        \"phone\": \"9871234560\",\n        \"avatarUrl\": null\n    }\n]"
+                            "body": "[\n    {\n        \"id\": \"friend-abhay\",\n        \"name\": \"Abhay\",\n        \"email\": \"abhay.verma@example.com\",\n        \"phone\": \"9876543210\",\n        \"avatarUrl\": null\n    },\n    {\n        \"id\": \"friend-divanshu\",\n        \"name\": \"Divanshu\",\n        \"email\": \"divanshu.gupta@example.com\",\n        \"phone\": \"9123456780\",\n        \"avatarUrl\": null\n    }\n]"
                         },
                         {
                             "name": "401 Unauthorized - missing/invalid token",
@@ -730,12 +869,14 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{baseUrl}}/users",
+                                    "raw": "{{baseUrl}}/users/me/friends",
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
                                     "path": [
-                                        "users"
+                                        "users",
+                                        "me",
+                                        "friends"
                                     ]
                                 },
                                 "auth": {
@@ -926,7 +1067,7 @@
                                 }
                             }
                         },
-                        "description": "Partial update -- send only the fields you want to change."
+                        "description": "Partial update -- send only the fields you want to change. Self only: {{userId}} must match the caller."
                     },
                     "response": [
                         {
@@ -1148,6 +1289,48 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
+                        },
+                        {
+                            "name": "403 Forbidden - not your own account",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/users/{{userId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "{{userId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Utkarsh S.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Forbidden",
+                            "code": 403,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You can only modify your own account\"\n    }\n}"
                         }
                     ]
                 },
@@ -1171,7 +1354,7 @@
                                 "{{userId}}"
                             ]
                         },
-                        "description": "Blocked with 409 if the user has paid for or split any expense, or sent/received a payment."
+                        "description": "Blocked with 409 if the user has paid for or split any expense, or sent/received a payment. Self only: {{userId}} must match the caller."
                     },
                     "response": [
                         {
@@ -1315,6 +1498,39 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
+                        },
+                        {
+                            "name": "403 Forbidden - not your own account",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/users/{{userId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "{{userId}}"
+                                    ]
+                                }
+                            },
+                            "status": "Forbidden",
+                            "code": 403,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You can only modify your own account\"\n    }\n}"
                         }
                     ]
                 }
@@ -2213,6 +2429,494 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Invitations",
+            "description": "Invite an email that is not yet registered to join a group. The raw token is never returned by the API -- it only goes out in the invite email (`${FRONTEND_URL}/register?invite=<token>`), so treat `{{inviteToken}}` below as something you copy from that link/log, not from a response body.",
+            "item": [
+                {
+                    "name": "Create invitation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "groups",
+                                "{{groupId}}",
+                                "invitations"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Only for emails that are not yet registered. If the email already belongs to a registered user, look them up via Users > Lookup and add them directly with Groups > Update instead."
+                    },
+                    "response": [
+                        {
+                            "name": "201 Created",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Created",
+                            "code": 201,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": \"{{$guid}}\",\n    \"groupId\": \"group-daaru-party\",\n    \"email\": \"not.registered.yet@example.com\",\n    \"status\": \"pending\",\n    \"expiresAt\": \"{{$isoTimestamp}}\"\n}"
+                        },
+                        {
+                            "name": "200 OK - a pending invitation for this email already exists (idempotent)",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": \"{{$guid}}\",\n    \"groupId\": \"group-daaru-party\",\n    \"email\": \"not.registered.yet@example.com\",\n    \"status\": \"pending\",\n    \"expiresAt\": \"{{$isoTimestamp}}\"\n}"
+                        },
+                        {
+                            "name": "400 Validation Error - malformed email",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"not-an-email\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Bad Request",
+                            "code": 400,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Email must be an email\"\n    }\n}"
+                        },
+                        {
+                            "name": "409 Conflict - email already belongs to a registered user",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"abhay.verma@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"A user with this email is already registered -- add them to the group directly instead of inviting\"\n    }\n}"
+                        },
+                        {
+                            "name": "409 Conflict - email already an active member of this group",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"divanshu.gupta@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This email is already a member of the group\"\n    }\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized - missing/invalid token",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "not-a-real-token",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            },
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
+                        },
+                        {
+                            "name": "403 Forbidden - not a member of this group",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "invitations"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Forbidden",
+                            "code": 403,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Validate invitation token",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "invitations",
+                                "{{inviteToken}}"
+                            ]
+                        },
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "description": "Public -- no token required to call this endpoint (the invitation token itself is the credential). The frontend calls this when the registration page loads with `?invite=` in the URL, to show which group/email the invite is for before the person registers."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "invitations",
+                                        "{{inviteToken}}"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"email\": \"not.registered.yet@example.com\",\n    \"group\": {\n        \"id\": \"group-daaru-party\",\n        \"name\": \"Daaru Party\"\n    }\n}"
+                        },
+                        {
+                            "name": "404 Not Found - token does not match any invitation",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/invitations/not-a-real-token",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "invitations",
+                                        "not-a-real-token"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Invitation not found\"\n    }\n}"
+                        },
+                        {
+                            "name": "409 Conflict - expired, revoked, or already accepted",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "invitations",
+                                        "{{inviteToken}}"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This invitation is no longer valid\"\n    }\n}"
                         }
                     ]
                 }
