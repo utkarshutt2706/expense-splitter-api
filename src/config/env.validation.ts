@@ -7,6 +7,7 @@ export const envSchema = z.object({
     CORS_ALLOWED_ORIGINS: z.string().min(1),
     API_KEY: z.string().min(16),
     JWT_SECRET: z.string().min(32),
+    FRONTEND_URL: z.url(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

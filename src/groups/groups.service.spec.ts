@@ -21,16 +21,16 @@ describe('GroupsService', () => {
             delete: jest.Mock;
         };
         groupMember: {
-            deleteMany: jest.Mock;
-            createMany: jest.Mock;
+            updateMany: jest.Mock;
+            upsert: jest.Mock;
         };
         $transaction: jest.Mock;
     };
 
     const createdAt = new Date('2026-07-01T00:00:00.000Z');
     const members: GroupMember[] = [
-        { groupId: 'group-1', userId: 'user-1' },
-        { groupId: 'group-1', userId: 'user-2' },
+        { groupId: 'group-1', userId: 'user-1', leftAt: null },
+        { groupId: 'group-1', userId: 'user-2', leftAt: null },
     ];
     const group: Group & { members: GroupMember[] } = {
         id: 'group-1',
@@ -49,8 +49,8 @@ describe('GroupsService', () => {
                 delete: jest.fn(),
             },
             groupMember: {
-                deleteMany: jest.fn(),
-                createMany: jest.fn(),
+                updateMany: jest.fn(),
+                upsert: jest.fn(),
             },
             $transaction: jest.fn(),
         };
@@ -83,7 +83,7 @@ describe('GroupsService', () => {
                         create: [{ userId: 'user-1' }, { userId: 'user-2' }],
                     },
                 },
-                include: { members: true },
+                include: { members: { where: { leftAt: null } } },
             });
         });
 
@@ -134,8 +134,8 @@ describe('GroupsService', () => {
                 },
             ]);
             expect(prisma.group.findMany).toHaveBeenCalledWith({
-                where: { members: { some: { userId: 'user-1' } } },
-                include: { members: true },
+                where: { members: { some: { userId: 'user-1', leftAt: null } } },
+                include: { members: { where: { leftAt: null } } },
             });
         });
     });
@@ -194,20 +194,30 @@ describe('GroupsService', () => {
             expect(prisma.$transaction).not.toHaveBeenCalled();
         });
 
-        it('replaces membership without touching the name', async () => {
-            await service.update('group-1', { memberIds: ['user-3', 'user-4'] });
+        it('soft-removes members no longer in the list and upserts new ones', async () => {
+            await service.update('group-1', { memberIds: ['user-2', 'user-3'] });
 
-            expect(prisma.groupMember.deleteMany).toHaveBeenCalledWith({
-                where: { groupId: 'group-1' },
+            expect(prisma.groupMember.updateMany).toHaveBeenCalledWith({
+                where: { groupId: 'group-1', userId: { in: ['user-1'] } },
+                data: { leftAt: expect.any(Date) as Date },
             });
-            expect(prisma.groupMember.createMany).toHaveBeenCalledWith({
-                data: [
-                    { groupId: 'group-1', userId: 'user-3' },
-                    { groupId: 'group-1', userId: 'user-4' },
-                ],
+            expect(prisma.groupMember.upsert).toHaveBeenCalledWith({
+                where: { groupId_userId: { groupId: 'group-1', userId: 'user-3' } },
+                create: { groupId: 'group-1', userId: 'user-3' },
+                update: { leftAt: null },
             });
             expect(prisma.$transaction).toHaveBeenCalled();
             expect(prisma.group.update).not.toHaveBeenCalled();
+        });
+
+        it('clears leftAt when a previously removed member rejoins', async () => {
+            await service.update('group-1', { memberIds: ['user-1', 'user-2', 'user-4'] });
+
+            expect(prisma.groupMember.upsert).toHaveBeenCalledWith({
+                where: { groupId_userId: { groupId: 'group-1', userId: 'user-4' } },
+                create: { groupId: 'group-1', userId: 'user-4' },
+                update: { leftAt: null },
+            });
         });
 
         it('updates both name and membership together', async () => {

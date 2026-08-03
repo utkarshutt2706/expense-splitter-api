@@ -8,6 +8,7 @@ import { validateEnv } from './config/env.validation';
 import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { HealthController } from './health/health.controller';
+import { InvitationsModule } from './invitations/invitations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
         ExpensesModule,
         PaymentsModule,
         BalancesModule,
+        InvitationsModule,
     ],
     controllers: [HealthController],
     providers: [
