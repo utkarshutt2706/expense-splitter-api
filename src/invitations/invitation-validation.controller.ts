@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
-import { ErrorResponseDto } from '../common/dto/error-response.dto';
+import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { ValidateInvitationResponseDto } from './dto/validate-invitation-response.dto';
 import { InvitationsService } from './invitations.service';
 
@@ -27,11 +27,13 @@ export class InvitationValidationController {
         status: 404,
         description: 'No invitation matches this token.',
         type: ErrorResponseDto,
+        example: errorExample('NOT_FOUND', 'Invitation not found'),
     })
     @ApiResponse({
         status: 409,
         description: 'The invitation exists but is expired, revoked, or already accepted.',
         type: ErrorResponseDto,
+        example: errorExample('CONFLICT', 'This invitation is no longer valid'),
     })
     validate(@Param('token') token: string): Promise<ValidateInvitationResponseDto> {
         return this.invitationsService.validate(token);

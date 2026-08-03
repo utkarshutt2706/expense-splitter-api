@@ -12,13 +12,17 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { ErrorResponseDto } from '../common/dto/error-response.dto';
+import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { JwtPayload } from '../common/jwt-payload';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsService } from './groups.service';
+
+const UNAUTHORIZED_EXAMPLE = errorExample('UNAUTHORIZED', 'Invalid or expired token');
+const NOT_A_MEMBER_EXAMPLE = errorExample('FORBIDDEN', 'You are not a member of this group');
+const GROUP_NOT_FOUND_EXAMPLE = errorExample('NOT_FOUND', 'Group does-not-exist not found');
 
 @ApiBearerAuth('access-token')
 @Controller('groups')
@@ -35,8 +39,29 @@ export class GroupsController {
         status: 400,
         description: 'Validation error, or a memberId does not reference an existing user.',
         type: ErrorResponseDto,
+        examples: {
+            validation: {
+                summary: 'Validation error',
+                value: errorExample(
+                    'VALIDATION_ERROR',
+                    'MemberIds must contain at least 1 elements',
+                ),
+            },
+            unknownMember: {
+                summary: 'Unknown memberId',
+                value: errorExample(
+                    'VALIDATION_ERROR',
+                    'One or more memberIds do not reference an existing user',
+                ),
+            },
+        },
     })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: UNAUTHORIZED_EXAMPLE,
+    })
     create(
         @CurrentUser() user: JwtPayload,
         @Body() dto: CreateGroupDto,
@@ -50,7 +75,12 @@ export class GroupsController {
         description: 'Only returns groups the caller is currently a member of.',
     })
     @ApiResponse({ status: 200, description: 'The groups.', type: [GroupResponseDto] })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: UNAUTHORIZED_EXAMPLE,
+    })
     findAll(@CurrentUser() user: JwtPayload): Promise<GroupResponseDto[]> {
         return this.groupsService.findAll(user.sub);
     }
@@ -59,13 +89,24 @@ export class GroupsController {
     @Get(':id')
     @ApiOperation({ summary: 'Get a group by id' })
     @ApiResponse({ status: 200, description: 'The group.', type: GroupResponseDto })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: UNAUTHORIZED_EXAMPLE,
+    })
     @ApiResponse({
         status: 403,
         description: 'The caller is not a member of this group.',
         type: ErrorResponseDto,
+        example: NOT_A_MEMBER_EXAMPLE,
     })
-    @ApiResponse({ status: 404, description: 'No group with that id.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 404,
+        description: 'No group with that id.',
+        type: ErrorResponseDto,
+        example: GROUP_NOT_FOUND_EXAMPLE,
+    })
     findOne(@Param('id') id: string): Promise<GroupResponseDto> {
         return this.groupsService.findOne(id);
     }
@@ -83,14 +124,29 @@ export class GroupsController {
         status: 400,
         description: 'A memberId does not reference an existing user.',
         type: ErrorResponseDto,
+        example: errorExample(
+            'VALIDATION_ERROR',
+            'One or more memberIds do not reference an existing user',
+        ),
     })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: UNAUTHORIZED_EXAMPLE,
+    })
     @ApiResponse({
         status: 403,
         description: 'The caller is not a member of this group.',
         type: ErrorResponseDto,
+        example: NOT_A_MEMBER_EXAMPLE,
     })
-    @ApiResponse({ status: 404, description: 'No group with that id.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 404,
+        description: 'No group with that id.',
+        type: ErrorResponseDto,
+        example: GROUP_NOT_FOUND_EXAMPLE,
+    })
     update(@Param('id') id: string, @Body() dto: UpdateGroupDto): Promise<GroupResponseDto> {
         return this.groupsService.update(id, dto);
     }
@@ -105,13 +161,24 @@ export class GroupsController {
             'invitations too.',
     })
     @ApiResponse({ status: 204, description: 'Deleted.' })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: UNAUTHORIZED_EXAMPLE,
+    })
     @ApiResponse({
         status: 403,
         description: 'The caller is not a member of this group.',
         type: ErrorResponseDto,
+        example: NOT_A_MEMBER_EXAMPLE,
     })
-    @ApiResponse({ status: 404, description: 'No group with that id.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 404,
+        description: 'No group with that id.',
+        type: ErrorResponseDto,
+        example: GROUP_NOT_FOUND_EXAMPLE,
+    })
     async remove(@Param('id') id: string): Promise<void> {
         await this.groupsService.remove(id);
     }

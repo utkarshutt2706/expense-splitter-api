@@ -15,3 +15,14 @@ export class ErrorResponseDto {
     @ApiProperty({ type: ErrorDetailDto })
     error: ErrorDetailDto;
 }
+
+/** Builds a per-response Swagger example matching the real error shape, since
+ * ErrorResponseDto's own @ApiProperty examples are shared across every status
+ * code that references the class -- this lets each @ApiResponse show the
+ * message it actually produces instead of a generic placeholder. */
+export function errorExample(
+    code: string,
+    message: string,
+): { error: { code: string; message: string } } {
+    return { error: { code, message } };
+}

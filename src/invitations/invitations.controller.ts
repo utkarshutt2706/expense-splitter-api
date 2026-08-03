@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { ErrorResponseDto } from '../common/dto/error-response.dto';
+import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { JwtPayload } from '../common/jwt-payload';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
@@ -29,12 +29,23 @@ export class InvitationsController {
         description: 'A pending invitation for this email already existed.',
         type: InvitationResponseDto,
     })
-    @ApiResponse({ status: 400, description: 'Malformed email.', type: ErrorResponseDto })
-    @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
+    @ApiResponse({
+        status: 400,
+        description: 'Malformed email.',
+        type: ErrorResponseDto,
+        example: errorExample('VALIDATION_ERROR', 'Email must be an email'),
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Missing or invalid token.',
+        type: ErrorResponseDto,
+        example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
+    })
     @ApiResponse({
         status: 403,
         description: 'The caller is not a member of this group.',
         type: ErrorResponseDto,
+        example: errorExample('FORBIDDEN', 'You are not a member of this group'),
     })
     @ApiResponse({
         status: 409,
@@ -42,6 +53,20 @@ export class InvitationsController {
             'The email already belongs to a registered user, or is already an active member of ' +
             'this group.',
         type: ErrorResponseDto,
+        examples: {
+            alreadyRegistered: {
+                summary: 'Email already registered',
+                value: errorExample(
+                    'CONFLICT',
+                    'A user with this email is already registered -- add them to the group ' +
+                        'directly instead of inviting',
+                ),
+            },
+            alreadyMember: {
+                summary: 'Already a member',
+                value: errorExample('CONFLICT', 'This email is already a member of the group'),
+            },
+        },
     })
     create(
         @Param('groupId') groupId: string,
