@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -42,6 +43,13 @@ export class UsersService {
             throw new NotFoundException('No registered user matches that email or phone');
         }
         return user;
+    }
+
+    findManyByIds(dto: BatchLookupUsersDto): Promise<PublicUser[]> {
+        return this.prisma.user.findMany({
+            where: { id: { in: dto.ids } },
+            omit: { passwordHash: true },
+        });
     }
 
     async findFriends(userId: string): Promise<PublicUser[]> {
