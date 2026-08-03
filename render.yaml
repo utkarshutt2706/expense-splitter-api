@@ -12,6 +12,8 @@ services:
         value: production
       - key: CORS_ALLOWED_ORIGINS
         value: https://utkarshutt2706.github.io
+      - key: FRONTEND_URL
+        value: https://utkarshutt2706.github.io
       - key: DATABASE_URL
         sync: false
       - key: API_KEY
