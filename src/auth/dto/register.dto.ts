@@ -18,4 +18,8 @@ export class RegisterDto {
     @MinLength(8)
     @MaxLength(200)
     password: string;
+
+    @IsOptional()
+    @IsString()
+    inviteToken?: string;
 }
