@@ -18,6 +18,7 @@ import { JwtPayload } from '../common/jwt-payload';
 import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import { PublicUser, UsersService } from './users.service';
 
 @ApiBearerAuth('access-token')
@@ -32,7 +33,7 @@ export class UsersController {
             'Exactly one of email/phone must be provided. Used to decide between adding an ' +
             'already-registered user directly, or inviting an unregistered email to a group.',
     })
-    @ApiResponse({ status: 200, description: 'A user matches.' })
+    @ApiResponse({ status: 200, description: 'A user matches.', type: UserResponseDto })
     @ApiResponse({
         status: 400,
         description: 'Neither or both of email/phone were provided.',
@@ -55,7 +56,11 @@ export class UsersController {
             'Derived, not stored: every user the caller has ever shared a group with (bidirectional, ' +
             'deduplicated, survives being removed from the group later).',
     })
-    @ApiResponse({ status: 200, description: 'The friend list (may be empty).' })
+    @ApiResponse({
+        status: 200,
+        description: 'The friend list (may be empty).',
+        type: [UserResponseDto],
+    })
     @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
     findFriends(@CurrentUser() user: JwtPayload): Promise<PublicUser[]> {
         return this.usersService.findFriends(user.sub);
@@ -71,6 +76,7 @@ export class UsersController {
     @ApiResponse({
         status: 200,
         description: 'Users matching the given ids (order not guaranteed).',
+        type: [UserResponseDto],
     })
     @ApiResponse({
         status: 400,
@@ -84,7 +90,7 @@ export class UsersController {
 
     @Get(':id')
     @ApiOperation({ summary: 'Get a user by id' })
-    @ApiResponse({ status: 200, description: 'The user.' })
+    @ApiResponse({ status: 200, description: 'The user.', type: UserResponseDto })
     @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
     @ApiResponse({ status: 404, description: 'No user with that id.', type: ErrorResponseDto })
     findOne(@Param('id') id: string): Promise<PublicUser> {
@@ -96,7 +102,7 @@ export class UsersController {
         summary: "Update the caller's own account",
         description: 'Partial update -- send only the fields you want to change. Self only.',
     })
-    @ApiResponse({ status: 200, description: 'Updated user.' })
+    @ApiResponse({ status: 200, description: 'Updated user.', type: UserResponseDto })
     @ApiResponse({ status: 400, description: 'Validation error.', type: ErrorResponseDto })
     @ApiResponse({ status: 401, description: 'Missing or invalid token.', type: ErrorResponseDto })
     @ApiResponse({
