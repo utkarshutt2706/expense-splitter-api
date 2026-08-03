@@ -39,13 +39,11 @@ describe('Expense journey (e2e)', () => {
                 .delete(`/groups/${groupId}`)
                 .set('Authorization', `Bearer ${creator.accessToken}`);
         }
-        if (creator) {
-            for (const user of [creator, member, outsider]) {
-                if (!user) continue;
-                await request(app.getHttpServer())
-                    .delete(`/users/${user.user.id}`)
-                    .set('Authorization', `Bearer ${creator.accessToken}`);
-            }
+        for (const user of [creator, member, outsider]) {
+            if (!user) continue;
+            await request(app.getHttpServer())
+                .delete(`/users/${user.user.id}`)
+                .set('Authorization', `Bearer ${user.accessToken}`);
         }
         await app?.close();
     });
