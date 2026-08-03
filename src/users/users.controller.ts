@@ -8,11 +8,13 @@ import {
     HttpStatus,
     Param,
     Patch,
+    Post,
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/jwt-payload';
+import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PublicUser, UsersService } from './users.service';
@@ -30,6 +32,11 @@ export class UsersController {
     @Get('me/friends')
     findFriends(@CurrentUser() user: JwtPayload): Promise<PublicUser[]> {
         return this.usersService.findFriends(user.sub);
+    }
+
+    @Post('batch')
+    findManyByIds(@Body() dto: BatchLookupUsersDto): Promise<PublicUser[]> {
+        return this.usersService.findManyByIds(dto);
     }
 
     @Get(':id')

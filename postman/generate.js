@@ -370,6 +370,49 @@ const usersFolder = {
                 'deduplicated, survives being removed from the group later).',
         ),
         item(
+            'Batch lookup by ids',
+            req('POST', '/users/batch', {
+                body: { ids: [USERS.abhay.id, USERS.divanshu.id] },
+            }),
+            [
+                example(
+                    '200 OK',
+                    req('POST', '/users/batch', {
+                        body: { ids: [USERS.abhay.id, USERS.divanshu.id] },
+                    }),
+                    'OK',
+                    200,
+                    [USERS.abhay, USERS.divanshu],
+                ),
+                example(
+                    '200 OK - unknown ids are silently omitted, not an error',
+                    req('POST', '/users/batch', {
+                        body: { ids: [USERS.abhay.id, 'does-not-exist'] },
+                    }),
+                    'OK',
+                    200,
+                    [USERS.abhay],
+                ),
+                example(
+                    '400 Validation Error - empty ids array',
+                    req('POST', '/users/batch', { body: { ids: [] } }),
+                    'Bad Request',
+                    400,
+                    {
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: 'Ids must contain at least 1 elements',
+                        },
+                    },
+                ),
+                unauthorizedExample('/users/batch', 'POST', { ids: [USERS.abhay.id] }),
+            ],
+            'Resolves a group\'s memberIds (or an expense\'s split userIds) to display-ready user ' +
+                'records in one call, since there\'s no unfiltered GET /users to fetch everyone and ' +
+                'filter client-side anymore. IDs are opaque UUIDs, so this isn\'t an enumeration risk -- ' +
+                'you can only look up IDs you already have from data you were authorized to see.',
+        ),
+        item(
             'Get user by id',
             req('GET', '/users/{{userId}}'),
             [

@@ -105,6 +105,20 @@ describe('UsersService', () => {
         });
     });
 
+    describe('findManyByIds', () => {
+        it('returns the users matching the given ids', async () => {
+            prisma.user.findMany.mockResolvedValue([user]);
+
+            await expect(service.findManyByIds({ ids: ['user-1', 'user-2'] })).resolves.toEqual([
+                user,
+            ]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: { id: { in: ['user-1', 'user-2'] } },
+                omit: { passwordHash: true },
+            });
+        });
+    });
+
     describe('findFriends', () => {
         it('returns an empty list when the user has no groups', async () => {
             prisma.groupMember.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
