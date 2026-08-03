@@ -16,6 +16,8 @@ model User {
   groupMemberships GroupMember[]
   expensesPaid     Expense[]      @relation("ExpensePaidBy")
   expenseSplits    ExpenseSplit[]
+  paymentsSent     Payment[]      @relation("PaymentFrom")
+  paymentsReceived Payment[]      @relation("PaymentTo")
 
   @@map("users")
 }
@@ -27,6 +29,7 @@ model Group {
 
   members  GroupMember[]
   expenses Expense[]
+  payments Payment[]
 
   @@map("groups")
 }
@@ -78,4 +81,19 @@ model ExpenseSplit {
 
   @@unique([expenseId, userId])
   @@map("expense_splits")
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  groupId    String
+  fromUserId String
+  toUserId   String
+  amount     Decimal  @db.Decimal(12, 2)
+  createdAt  DateTime @default(now())
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("PaymentFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("PaymentTo", fields: [toUserId], references: [id])
+
+  @@map("payments")
 }
