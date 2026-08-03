@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ApiKeyGuard } from './auth/api-key.guard';
 import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { BalancesModule } from './balances/balances.module';
 import { validateEnv } from './config/env.validation';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -30,7 +30,7 @@ import { UsersModule } from './users/users.module';
     providers: [
         {
             provide: APP_GUARD,
-            useClass: ApiKeyGuard,
+            useClass: JwtAuthGuard,
         },
     ],
 })

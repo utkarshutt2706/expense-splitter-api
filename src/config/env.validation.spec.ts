@@ -5,6 +5,7 @@ describe('validateEnv', () => {
         DATABASE_URL: 'postgresql://user:password@host:5432/database',
         CORS_ALLOWED_ORIGINS: 'https://utkarshutt2706.github.io',
         API_KEY: 'a-sufficiently-long-secret',
+        JWT_SECRET: 'a-sufficiently-long-jwt-signing-secret',
     };
 
     it('accepts a valid config and applies defaults', () => {
@@ -38,6 +39,12 @@ describe('validateEnv', () => {
 
     it('throws when API_KEY is too short', () => {
         expect(() => validateEnv({ ...validConfig, API_KEY: 'short' })).toThrow(
+            'Invalid environment configuration',
+        );
+    });
+
+    it('throws when JWT_SECRET is too short', () => {
+        expect(() => validateEnv({ ...validConfig, JWT_SECRET: 'short' })).toThrow(
             'Invalid environment configuration',
         );
     });

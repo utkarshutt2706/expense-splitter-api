@@ -1,4 +1,4 @@
-import { AuthUserResponseDto } from './dto/auth-user-response.dto';
+import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -11,12 +11,15 @@ describe('AuthController', () => {
     let controller: AuthController;
     let authService: MockedAuthService;
 
-    const user: AuthUserResponseDto = {
-        id: 'user-1',
-        name: 'Existing User',
-        email: 'existing@example.com',
-        phone: null,
-        avatarUrl: null,
+    const tokenResponse: AuthTokenResponseDto = {
+        user: {
+            id: 'user-1',
+            name: 'Existing User',
+            email: 'existing@example.com',
+            phone: null,
+            avatarUrl: null,
+        },
+        accessToken: 'signed-jwt-token',
     };
 
     beforeEach(() => {
@@ -25,22 +28,22 @@ describe('AuthController', () => {
     });
 
     it('delegates register to the service', async () => {
-        authService.register.mockResolvedValue(user);
+        authService.register.mockResolvedValue(tokenResponse);
 
         const dto = {
             name: 'Existing User',
             email: 'existing@example.com',
             password: 'password123',
         };
-        await expect(controller.register(dto)).resolves.toEqual(user);
+        await expect(controller.register(dto)).resolves.toEqual(tokenResponse);
         expect(authService.register).toHaveBeenCalledWith(dto);
     });
 
     it('delegates login to the service', async () => {
-        authService.login.mockResolvedValue(user);
+        authService.login.mockResolvedValue(tokenResponse);
 
         const dto = { email: 'existing@example.com', password: 'password123' };
-        await expect(controller.login(dto)).resolves.toEqual(user);
+        await expect(controller.login(dto)).resolves.toEqual(tokenResponse);
         expect(authService.login).toHaveBeenCalledWith(dto);
     });
 });
