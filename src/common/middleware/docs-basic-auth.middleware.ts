@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { timingSafeCompare } from './timing-safe-compare';
+import { timingSafeCompare } from '../timing-safe-compare';
 
 const BASIC_AUTH_PREFIX = 'Basic ';
 

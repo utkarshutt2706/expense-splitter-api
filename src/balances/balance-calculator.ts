@@ -1,3 +1,5 @@
+import { fromCents, toCents } from '../common/money';
+
 export interface NetBalance {
     userId: string;
     balance: number;
@@ -18,14 +20,6 @@ interface PaymentInput {
     fromUserId: string;
     toUserId: string;
     amount: number;
-}
-
-function toCents(amount: number): number {
-    return Math.round(amount * 100);
-}
-
-function fromCents(cents: number): number {
-    return Math.round(cents) / 100;
 }
 
 export function calculateNetBalances(

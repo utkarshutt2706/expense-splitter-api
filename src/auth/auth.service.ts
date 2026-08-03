@@ -1,12 +1,12 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
+import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { JwtPayload } from './jwt-payload.interface';
 import { hashPassword, verifyPassword } from './password-hasher';
 
 @Injectable()
