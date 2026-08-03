@@ -1,4 +1,9 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConflictException,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,14 +20,26 @@ function knownRequestError(code: string, meta?: Record<string, unknown>) {
 
 describe('AuthService', () => {
     let service: AuthService;
+    let tx: {
+        user: { create: jest.Mock };
+        groupMember: { upsert: jest.Mock };
+        groupInvitation: { findUnique: jest.Mock; update: jest.Mock };
+    };
     let prisma: {
-        user: { create: jest.Mock; findUnique: jest.Mock };
+        user: { findUnique: jest.Mock };
+        $transaction: jest.Mock;
     };
     let jwtService: { signAsync: jest.Mock };
 
     beforeEach(() => {
+        tx = {
+            user: { create: jest.fn() },
+            groupMember: { upsert: jest.fn() },
+            groupInvitation: { findUnique: jest.fn(), update: jest.fn() },
+        };
         prisma = {
-            user: { create: jest.fn(), findUnique: jest.fn() },
+            user: { findUnique: jest.fn() },
+            $transaction: jest.fn((callback: (tx: unknown) => unknown) => callback(tx)),
         };
         jwtService = { signAsync: jest.fn().mockResolvedValue('signed-jwt-token') };
         service = new AuthService(
@@ -40,7 +57,7 @@ describe('AuthService', () => {
         };
 
         it('creates a user with a hashed password, returns a token and public shape', async () => {
-            prisma.user.create.mockResolvedValue({
+            tx.user.create.mockResolvedValue({
                 id: 'user-1',
                 name: dto.name,
                 email: dto.email,
@@ -62,7 +79,7 @@ describe('AuthService', () => {
             });
             expect(jwtService.signAsync).toHaveBeenCalledWith({ sub: 'user-1', email: dto.email });
 
-            const createMock = prisma.user.create as jest.Mock<
+            const createMock = tx.user.create as jest.Mock<
                 unknown,
                 [{ data: { passwordHash: string }; omit: { passwordHash: boolean } }]
             >;
@@ -73,15 +90,92 @@ describe('AuthService', () => {
         });
 
         it('throws ConflictException when the email is already registered', async () => {
-            prisma.user.create.mockRejectedValue(knownRequestError('P2002', { target: ['email'] }));
+            tx.user.create.mockRejectedValue(knownRequestError('P2002', { target: ['email'] }));
 
             await expect(service.register(dto)).rejects.toThrow(ConflictException);
         });
 
         it('rethrows unrecognized errors unchanged', async () => {
-            prisma.user.create.mockRejectedValue(new Error('boom'));
+            tx.user.create.mockRejectedValue(new Error('boom'));
 
             await expect(service.register(dto)).rejects.toThrow('boom');
+        });
+
+        describe('with an inviteToken', () => {
+            const inviteDto = { ...dto, inviteToken: 'raw-token' };
+
+            it('joins the invited group and marks the invitation accepted', async () => {
+                tx.groupInvitation.findUnique.mockResolvedValue({
+                    id: 'invitation-1',
+                    groupId: 'group-1',
+                    email: dto.email,
+                    status: 'pending',
+                    expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+                });
+                tx.user.create.mockResolvedValue({
+                    id: 'user-1',
+                    name: dto.name,
+                    email: dto.email,
+                    phone: dto.phone,
+                    avatarUrl: null,
+                });
+
+                await service.register(inviteDto);
+
+                expect(tx.groupMember.upsert).toHaveBeenCalledWith({
+                    where: { groupId_userId: { groupId: 'group-1', userId: 'user-1' } },
+                    create: { groupId: 'group-1', userId: 'user-1' },
+                    update: { leftAt: null },
+                });
+                expect(tx.groupInvitation.update).toHaveBeenCalledWith({
+                    where: { id: 'invitation-1' },
+                    data: { status: 'accepted', acceptedAt: expect.any(Date) as Date },
+                });
+            });
+
+            it('throws NotFoundException when the token does not match any invitation', async () => {
+                tx.groupInvitation.findUnique.mockResolvedValue(null);
+
+                await expect(service.register(inviteDto)).rejects.toThrow(NotFoundException);
+                expect(tx.user.create).not.toHaveBeenCalled();
+            });
+
+            it('throws ConflictException when the invitation is expired', async () => {
+                tx.groupInvitation.findUnique.mockResolvedValue({
+                    id: 'invitation-1',
+                    groupId: 'group-1',
+                    email: dto.email,
+                    status: 'pending',
+                    expiresAt: new Date(Date.now() - 1000),
+                });
+
+                await expect(service.register(inviteDto)).rejects.toThrow(ConflictException);
+            });
+
+            it('throws ConflictException when the invitation was already accepted', async () => {
+                tx.groupInvitation.findUnique.mockResolvedValue({
+                    id: 'invitation-1',
+                    groupId: 'group-1',
+                    email: dto.email,
+                    status: 'accepted',
+                    expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+                });
+
+                await expect(service.register(inviteDto)).rejects.toThrow(ConflictException);
+            });
+
+            it('throws BadRequestException when the invitation email does not match', async () => {
+                tx.groupInvitation.findUnique.mockResolvedValue({
+                    id: 'invitation-1',
+                    groupId: 'group-1',
+                    email: 'someone-else@example.com',
+                    status: 'pending',
+                    expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+                });
+
+                await expect(service.register(inviteDto)).rejects.toThrow(BadRequestException);
+                expect(tx.user.create).not.toHaveBeenCalled();
+            });
         });
     });
 

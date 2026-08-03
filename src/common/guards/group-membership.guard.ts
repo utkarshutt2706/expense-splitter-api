@@ -24,7 +24,7 @@ export class GroupMembershipGuard implements CanActivate {
         const userId = request.user.sub;
         const group = await this.prisma.group.findUnique({
             where: { id: groupId },
-            include: { members: { where: { userId } } },
+            include: { members: { where: { userId, leftAt: null } } },
         });
 
         if (!group) {
