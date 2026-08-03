@@ -7,6 +7,8 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 
 type GroupWithMembers = Group & { members: GroupMember[] };
 
+const ACTIVE_MEMBER = { leftAt: null };
+
 @Injectable()
 export class GroupsService {
     constructor(private readonly prisma: PrismaService) {}
@@ -22,7 +24,7 @@ export class GroupsService {
                         create: memberIds.map((userId) => ({ userId })),
                     },
                 },
-                include: { members: true },
+                include: { members: { where: ACTIVE_MEMBER } },
             });
             return this.toResponse(group);
         } catch (error) {
@@ -32,8 +34,8 @@ export class GroupsService {
 
     async findAll(userId: string): Promise<GroupResponseDto[]> {
         const groups = await this.prisma.group.findMany({
-            where: { members: { some: { userId } } },
-            include: { members: true },
+            where: { members: { some: { userId, ...ACTIVE_MEMBER } } },
+            include: { members: { where: ACTIVE_MEMBER } },
         });
         return groups.map((group) => this.toResponse(group));
     }
@@ -41,7 +43,7 @@ export class GroupsService {
     async findOne(id: string): Promise<GroupResponseDto> {
         const group = await this.prisma.group.findUnique({
             where: { id },
-            include: { members: true },
+            include: { members: { where: ACTIVE_MEMBER } },
         });
         if (!group) {
             throw new NotFoundException(`Group ${id} not found`);
@@ -58,15 +60,33 @@ export class GroupsService {
     }
 
     async update(id: string, dto: UpdateGroupDto): Promise<GroupResponseDto> {
-        await this.findOne(id);
+        const existing = await this.prisma.group.findUnique({
+            where: { id },
+            include: { members: { where: ACTIVE_MEMBER } },
+        });
+        if (!existing) {
+            throw new NotFoundException(`Group ${id} not found`);
+        }
 
         try {
             if (dto.memberIds) {
+                const currentUserIds = new Set(existing.members.map((member) => member.userId));
+                const nextUserIds = new Set(dto.memberIds);
+                const toRemove = [...currentUserIds].filter((userId) => !nextUserIds.has(userId));
+                const toAdd = [...nextUserIds].filter((userId) => !currentUserIds.has(userId));
+
                 await this.prisma.$transaction([
-                    this.prisma.groupMember.deleteMany({ where: { groupId: id } }),
-                    this.prisma.groupMember.createMany({
-                        data: dto.memberIds.map((userId) => ({ groupId: id, userId })),
+                    this.prisma.groupMember.updateMany({
+                        where: { groupId: id, userId: { in: toRemove } },
+                        data: { leftAt: new Date() },
                     }),
+                    ...toAdd.map((userId) =>
+                        this.prisma.groupMember.upsert({
+                            where: { groupId_userId: { groupId: id, userId } },
+                            create: { groupId: id, userId },
+                            update: { leftAt: null },
+                        }),
+                    ),
                 ]);
             }
             if (dto.name !== undefined) {

@@ -31,7 +31,19 @@ describe('GroupMembershipGuard', () => {
         await expect(guard.canActivate(mockContext({ groupId: 'group-1' }))).resolves.toBe(true);
         expect(prisma.group.findUnique).toHaveBeenCalledWith({
             where: { id: 'group-1' },
-            include: { members: { where: { userId: 'user-1' } } },
+            include: { members: { where: { userId: 'user-1', leftAt: null } } },
+        });
+    });
+
+    it('throws ForbiddenException when the user has left the group', async () => {
+        prisma.group.findUnique.mockResolvedValue({ id: 'group-1', members: [] });
+
+        await expect(guard.canActivate(mockContext({ groupId: 'group-1' }))).rejects.toThrow(
+            ForbiddenException,
+        );
+        expect(prisma.group.findUnique).toHaveBeenCalledWith({
+            where: { id: 'group-1' },
+            include: { members: { where: { userId: 'user-1', leftAt: null } } },
         });
     });
 
