@@ -1,6 +1,5 @@
-import { User } from '@prisma/client';
 import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { PublicUser, UsersService } from './users.service';
 
 type MockedUsersService = {
     create: jest.Mock;
@@ -14,7 +13,7 @@ describe('UsersController', () => {
     let controller: UsersController;
     let usersService: MockedUsersService;
 
-    const user: User = {
+    const user: PublicUser = {
         id: 'user-1',
         name: 'Utkarsh',
         email: null,

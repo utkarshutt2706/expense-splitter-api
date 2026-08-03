@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from './users.service';
+import { PublicUser, UsersService } from './users.service';
 
 function knownRequestError(
     code: string,
@@ -26,7 +26,7 @@ describe('UsersService', () => {
         };
     };
 
-    const user: User = {
+    const user: PublicUser = {
         id: 'user-1',
         name: 'Utkarsh',
         email: 'utkarsh@example.com',
