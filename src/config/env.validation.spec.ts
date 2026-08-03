@@ -6,6 +6,7 @@ describe('validateEnv', () => {
         CORS_ALLOWED_ORIGINS: 'https://utkarshutt2706.github.io',
         API_KEY: 'a-sufficiently-long-secret',
         JWT_SECRET: 'a-sufficiently-long-jwt-signing-secret',
+        FRONTEND_URL: 'https://utkarshutt2706.github.io',
     };
 
     it('accepts a valid config and applies defaults', () => {
