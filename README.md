@@ -5,9 +5,14 @@ NestJS REST API for the Expense Splitter application.
 ## Features
 
 - Users and friends CRUD with unique contact validation
-- Groups with atomic membership mutations
-- Expenses with split calculation and persistence
-- Group balances and simplified settlement transactions
+- Groups CRUD, with a single partial-update endpoint for rename and membership
+  changes (membership replacement is a full `memberIds` array, not a delta)
+- Expenses CRUD, with server-side recomputation and validation of submitted splits
+  against `amount` + `splitType` before persisting
+- Payments: create and list-by-group only (immutable once recorded, no
+  get-by-id/update/delete)
+- Group balances: net balance per member and a Simplify Debt–minimized settlement
+  list, computed from expenses and payments together
 - Health check endpoint for uptime monitoring
 
 ## Local development
@@ -50,10 +55,18 @@ Render deploy hook only after `CI` finishes successfully on `main` — Render's 
 triggers two independent deploys instead of one.
 
 Schema migrations are managed with Prisma (`prisma/schema.prisma`,
-`prisma/migrations/`). Configure `pnpm prisma:migrate:deploy` as Render's **Pre-Deploy
-Command** for this service, so it runs against Neon before each deploy goes live.
-Don't run migrations from GitHub Actions itself; Render's pre-deploy hook is the right
-place since it runs against the same environment the deploy is targeting.
+`prisma/migrations/`). Render's `preDeployCommand` isn't available on the free plan,
+so `pnpm prisma:migrate:deploy` runs as part of the **start command** instead (see
+`render.yaml`), ahead of every boot rather than only on deploy — safe since it's a
+no-op when there's nothing pending, and this also covers the free tier's frequent
+idle-then-wake cycles, not just fresh deploys. Don't run migrations from GitHub
+Actions itself; Render is the right place since it runs against the same environment
+the deploy is targeting.
+
+The whole service is defined as code in `render.yaml` (a Render Blueprint) rather
+than manual dashboard configuration — build/start commands, region, plan, and which
+env vars are secrets vs. plain values all live there and are reviewable like any
+other change.
 
 ## Required repository secrets
 
