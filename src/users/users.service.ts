@@ -1,7 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 export type PublicUser = Omit<User, 'passwordHash'>;
@@ -9,18 +14,6 @@ export type PublicUser = Omit<User, 'passwordHash'>;
 @Injectable()
 export class UsersService {
     constructor(private readonly prisma: PrismaService) {}
-
-    create(dto: CreateUserDto): Promise<PublicUser> {
-        return this.prisma.user
-            .create({ data: dto, omit: { passwordHash: true } })
-            .catch((error: unknown) => {
-                throw this.mapPrismaError(error);
-            });
-    }
-
-    findAll(): Promise<PublicUser[]> {
-        return this.prisma.user.findMany({ omit: { passwordHash: true } });
-    }
 
     async findOne(id: string): Promise<PublicUser> {
         const user = await this.prisma.user.findUnique({
@@ -31,6 +24,43 @@ export class UsersService {
             throw new NotFoundException(`User ${id} not found`);
         }
         return user;
+    }
+
+    async lookup(dto: LookupUserDto): Promise<PublicUser> {
+        if (dto.email && dto.phone) {
+            throw new BadRequestException('Provide only one of email or phone, not both');
+        }
+        if (!dto.email && !dto.phone) {
+            throw new BadRequestException('email or phone is required');
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: dto.email ? { email: dto.email } : { phone: dto.phone as string },
+            omit: { passwordHash: true },
+        });
+        if (!user) {
+            throw new NotFoundException('No registered user matches that email or phone');
+        }
+        return user;
+    }
+
+    async findFriends(userId: string): Promise<PublicUser[]> {
+        const myGroups = await this.prisma.groupMember.findMany({
+            where: { userId },
+            select: { groupId: true },
+        });
+        const groupIds = myGroups.map((membership) => membership.groupId);
+
+        const friendMemberships = await this.prisma.groupMember.findMany({
+            where: { groupId: { in: groupIds }, userId: { not: userId } },
+            select: { userId: true },
+            distinct: ['userId'],
+        });
+
+        return this.prisma.user.findMany({
+            where: { id: { in: friendMemberships.map((membership) => membership.userId) } },
+            omit: { passwordHash: true },
+        });
     }
 
     update(id: string, dto: UpdateUserDto): Promise<PublicUser> {

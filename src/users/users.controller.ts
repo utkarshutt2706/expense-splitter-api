@@ -2,15 +2,18 @@ import {
     Body,
     Controller,
     Delete,
+    ForbiddenException,
     Get,
     HttpCode,
     HttpStatus,
     Param,
     Patch,
-    Post,
+    Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { JwtPayload } from '../common/jwt-payload';
+import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PublicUser, UsersService } from './users.service';
 
@@ -19,14 +22,14 @@ import { PublicUser, UsersService } from './users.service';
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
-    @Post()
-    create(@Body() dto: CreateUserDto): Promise<PublicUser> {
-        return this.usersService.create(dto);
+    @Get('lookup')
+    lookup(@Query() dto: LookupUserDto): Promise<PublicUser> {
+        return this.usersService.lookup(dto);
     }
 
-    @Get()
-    findAll(): Promise<PublicUser[]> {
-        return this.usersService.findAll();
+    @Get('me/friends')
+    findFriends(@CurrentUser() user: JwtPayload): Promise<PublicUser[]> {
+        return this.usersService.findFriends(user.sub);
     }
 
     @Get(':id')
@@ -35,13 +38,25 @@ export class UsersController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<PublicUser> {
+    update(
+        @CurrentUser() user: JwtPayload,
+        @Param('id') id: string,
+        @Body() dto: UpdateUserDto,
+    ): Promise<PublicUser> {
+        this.assertSelf(user, id);
         return this.usersService.update(id, dto);
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    async remove(@Param('id') id: string): Promise<void> {
+    async remove(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
+        this.assertSelf(user, id);
         await this.usersService.remove(id);
+    }
+
+    private assertSelf(user: JwtPayload, id: string): void {
+        if (user.sub !== id) {
+            throw new ForbiddenException('You can only modify your own account');
+        }
     }
 }

@@ -1,9 +1,10 @@
+import { ForbiddenException } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { PublicUser, UsersService } from './users.service';
 
 type MockedUsersService = {
-    create: jest.Mock;
-    findAll: jest.Mock;
+    lookup: jest.Mock;
+    findFriends: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
     remove: jest.Mock;
@@ -13,6 +14,7 @@ describe('UsersController', () => {
     let controller: UsersController;
     let usersService: MockedUsersService;
 
+    const currentUser = { sub: 'user-1', email: 'user-1@example.com' };
     const user: PublicUser = {
         id: 'user-1',
         name: 'Utkarsh',
@@ -23,8 +25,8 @@ describe('UsersController', () => {
 
     beforeEach(() => {
         usersService = {
-            create: jest.fn(),
-            findAll: jest.fn(),
+            lookup: jest.fn(),
+            findFriends: jest.fn(),
             findOne: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
@@ -32,17 +34,18 @@ describe('UsersController', () => {
         controller = new UsersController(usersService as unknown as UsersService);
     });
 
-    it('delegates create to the service', async () => {
-        usersService.create.mockResolvedValue(user);
+    it('delegates lookup to the service', async () => {
+        usersService.lookup.mockResolvedValue(user);
 
-        await expect(controller.create({ name: 'Utkarsh' })).resolves.toEqual(user);
-        expect(usersService.create).toHaveBeenCalledWith({ name: 'Utkarsh' });
+        await expect(controller.lookup({ email: 'a@example.com' })).resolves.toEqual(user);
+        expect(usersService.lookup).toHaveBeenCalledWith({ email: 'a@example.com' });
     });
 
-    it('delegates findAll to the service', async () => {
-        usersService.findAll.mockResolvedValue([user]);
+    it('delegates findFriends to the service using the caller id', async () => {
+        usersService.findFriends.mockResolvedValue([user]);
 
-        await expect(controller.findAll()).resolves.toEqual([user]);
+        await expect(controller.findFriends(currentUser)).resolves.toEqual([user]);
+        expect(usersService.findFriends).toHaveBeenCalledWith('user-1');
     });
 
     it('delegates findOne to the service', async () => {
@@ -52,17 +55,31 @@ describe('UsersController', () => {
         expect(usersService.findOne).toHaveBeenCalledWith('user-1');
     });
 
-    it('delegates update to the service', async () => {
+    it('delegates update to the service when updating self', async () => {
         usersService.update.mockResolvedValue(user);
 
-        await expect(controller.update('user-1', { name: 'New Name' })).resolves.toEqual(user);
+        await expect(
+            controller.update(currentUser, 'user-1', { name: 'New Name' }),
+        ).resolves.toEqual(user);
         expect(usersService.update).toHaveBeenCalledWith('user-1', { name: 'New Name' });
     });
 
-    it('delegates remove to the service', async () => {
+    it('throws ForbiddenException when updating a different user', () => {
+        expect(() => controller.update(currentUser, 'user-2', { name: 'New Name' })).toThrow(
+            ForbiddenException,
+        );
+        expect(usersService.update).not.toHaveBeenCalled();
+    });
+
+    it('delegates remove to the service when removing self', async () => {
         usersService.remove.mockResolvedValue(user);
 
-        await expect(controller.remove('user-1')).resolves.toBeUndefined();
+        await expect(controller.remove(currentUser, 'user-1')).resolves.toBeUndefined();
         expect(usersService.remove).toHaveBeenCalledWith('user-1');
+    });
+
+    it('throws ForbiddenException when removing a different user', async () => {
+        await expect(controller.remove(currentUser, 'user-2')).rejects.toThrow(ForbiddenException);
+        expect(usersService.remove).not.toHaveBeenCalled();
     });
 });
