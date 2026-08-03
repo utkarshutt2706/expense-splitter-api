@@ -68,7 +68,7 @@ describe('Friends and invitations (e2e)', () => {
         const response = await request(app.getHttpServer())
             .post('/groups')
             .set('Authorization', `Bearer ${userA.accessToken}`)
-            .send({ name: 'Goa Trip', memberIds: [] })
+            .send({ name: 'Goa Trip', memberIds: [userA.user.id] })
             .expect(201);
 
         groupId = (response.body as { id: string }).id;
