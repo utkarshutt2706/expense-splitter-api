@@ -26,8 +26,7 @@ async function bootstrap() {
         .setTitle('Expense Splitter API')
         .setDescription('REST API for the Expense Splitter application')
         .setVersion('0.0.1')
-        .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
-        .addSecurityRequirements('api-key')
+        .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
         .build();
     const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('docs', app, swaggerDocument);

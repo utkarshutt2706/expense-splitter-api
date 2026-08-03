@@ -1,4 +1,5 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
@@ -17,12 +18,17 @@ describe('AuthService', () => {
     let prisma: {
         user: { create: jest.Mock; findUnique: jest.Mock };
     };
+    let jwtService: { signAsync: jest.Mock };
 
     beforeEach(() => {
         prisma = {
             user: { create: jest.fn(), findUnique: jest.fn() },
         };
-        service = new AuthService(prisma as unknown as PrismaService);
+        jwtService = { signAsync: jest.fn().mockResolvedValue('signed-jwt-token') };
+        service = new AuthService(
+            prisma as unknown as PrismaService,
+            jwtService as unknown as JwtService,
+        );
     });
 
     describe('register', () => {
@@ -33,7 +39,7 @@ describe('AuthService', () => {
             password: 'a-secure-password',
         };
 
-        it('creates a user with a hashed password and returns the public shape', async () => {
+        it('creates a user with a hashed password, returns a token and public shape', async () => {
             prisma.user.create.mockResolvedValue({
                 id: 'user-1',
                 name: dto.name,
@@ -45,12 +51,17 @@ describe('AuthService', () => {
             const result = await service.register(dto);
 
             expect(result).toEqual({
-                id: 'user-1',
-                name: dto.name,
-                email: dto.email,
-                phone: dto.phone,
-                avatarUrl: null,
+                user: {
+                    id: 'user-1',
+                    name: dto.name,
+                    email: dto.email,
+                    phone: dto.phone,
+                    avatarUrl: null,
+                },
+                accessToken: 'signed-jwt-token',
             });
+            expect(jwtService.signAsync).toHaveBeenCalledWith({ sub: 'user-1', email: dto.email });
+
             const createMock = prisma.user.create as jest.Mock<
                 unknown,
                 [{ data: { passwordHash: string }; omit: { passwordHash: boolean } }]
@@ -75,7 +86,7 @@ describe('AuthService', () => {
     });
 
     describe('login', () => {
-        it('returns the public user shape for correct credentials', async () => {
+        it('returns a token with the public user shape for correct credentials', async () => {
             const passwordHash = await hashPassword('correct-password');
             prisma.user.findUnique.mockResolvedValue({
                 id: 'user-1',
@@ -92,13 +103,16 @@ describe('AuthService', () => {
             });
 
             expect(result).toEqual({
-                id: 'user-1',
-                name: 'Existing User',
-                email: 'existing@example.com',
-                phone: null,
-                avatarUrl: null,
+                user: {
+                    id: 'user-1',
+                    name: 'Existing User',
+                    email: 'existing@example.com',
+                    phone: null,
+                    avatarUrl: null,
+                },
+                accessToken: 'signed-jwt-token',
             });
-            expect(result).not.toHaveProperty('passwordHash');
+            expect(result.user).not.toHaveProperty('passwordHash');
         });
 
         it('throws UnauthorizedException when the email is not registered', async () => {

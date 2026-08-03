@@ -20,6 +20,7 @@ it's free and takes about ten minutes. See below.
 
 ## Features
 
+- JWT-based registration and login, gating every endpoint except `/health`
 - Users and friends CRUD with unique contact validation
 - Groups CRUD, with a single partial-update endpoint for rename and membership
   changes (membership replacement is a full `memberIds` array, not a delta)
@@ -38,22 +39,20 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 1. **Fork this repo.**
 2. **Create a database.** Sign up at [neon.tech](https://neon.tech) (free tier),
    create a project, and copy the connection string it gives you.
-3. **Generate a shared secret.** This API has no per-user login — the frontend
-   handles "who is this person" client-side, and the backend just needs one shared
-   secret so it isn't sitting open on the public internet. Anything long and random
-   works, e.g. `openssl rand -hex 32`.
+3. **Generate two secrets** — `API_KEY` (gates the `/docs` page) and `JWT_SECRET`
+   (signs auth tokens). Anything long, random, and different from each other works,
+   e.g. `openssl rand -hex 32` run twice.
 4. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
    click **New +** → **Blueprint**, and connect your fork. Render reads
    [`render.yaml`](render.yaml) automatically and provisions the service — build
    command, start command, region, and plan are all already defined there. You'll be
-   prompted for the two secrets it doesn't store in the file: `DATABASE_URL` (from
-   step 2) and `API_KEY` (from step 3).
+   prompted for the three secrets it doesn't store in the file: `DATABASE_URL` (from
+   step 2), `API_KEY`, and `JWT_SECRET` (both from step 3).
 5. **Note your service URL** once it's live (something like
    `https://your-app.onrender.com`) — the frontend needs it.
 6. **Deploy the frontend.** Fork
    [expense-splitter](https://github.com/utkarshutt2706/expense-splitter) and follow
-   its own README, pointing it at your backend's URL and the same `API_KEY` you
-   generated in step 3.
+   its own README, pointing it at your backend's URL.
 7. If your frontend ends up on a different origin than the default
    `CORS_ALLOWED_ORIGINS` value in `render.yaml`, update it (in the file or directly
    in Render's dashboard under Environment) to match — otherwise the browser will
@@ -74,19 +73,27 @@ endpoint is there for uptime pingers if you want to keep it warm.
 
 ## Authentication
 
-There's no per-user auth — the frontend already handles "who is this person" entirely
-client-side. Every request (except `/health`) must include the shared secret as an
-`x-api-key` header, matching the `API_KEY` environment variable. This exists only to
-keep the API from sitting fully open on the public internet; it does not distinguish
-between callers.
+Real per-user authentication: `POST /auth/register` creates an account (name, email,
+phone, password), `POST /auth/login` validates credentials, and both return a signed
+JWT alongside the user. Every request except `/health`, `/auth/register`, and
+`/auth/login` requires that token as `Authorization: Bearer <token>` — tokens are
+signed with `JWT_SECRET` and expire after 7 days, with no refresh flow yet.
+
+A user created as a mere expense/split participant (via `POST /users`, e.g. adding a
+friend who isn't going to use the app themselves) has no password and can't log in —
+only accounts created through `/auth/register` can.
+
+Authorization is not yet in place: any authenticated user can currently read or act on
+any group's data, not just groups they're a member of. That's the next piece planned.
 
 ## API documentation
 
 Interactive Swagger docs are served at `/docs` (and the raw spec at `/docs-json`).
 Since Swagger's routes are mounted outside Nest's normal request pipeline, they aren't
-covered by the `x-api-key` guard — instead `/docs` is gated by HTTP Basic Auth, using
-the `API_KEY` value as the password (username is ignored). Browsers will prompt for
-credentials automatically on first visit.
+covered by the JWT guard — instead `/docs` is gated separately by HTTP Basic Auth,
+using the `API_KEY` value as the password (username is ignored; this is the only
+remaining use of `API_KEY`, unrelated to the main API's auth). Browsers will prompt
+for credentials automatically on first visit.
 
 ## Environment variables
 
@@ -94,7 +101,9 @@ credentials automatically on first visit.
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
 - `NODE_ENV`
-- `API_KEY` — shared secret the frontend must send on every request
+- `API_KEY` — password for the `/docs` Basic Auth gate (see above)
+- `JWT_SECRET` — signs and verifies auth tokens; must be long and random, and
+  different from `API_KEY`
 
 ## Optional: code quality gate (SonarCloud)
 

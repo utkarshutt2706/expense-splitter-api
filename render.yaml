@@ -16,3 +16,5 @@ services:
         sync: false
       - key: API_KEY
         sync: false
+      - key: JWT_SECRET
+        sync: false

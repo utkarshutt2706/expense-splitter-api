@@ -9,11 +9,13 @@ import {
     Patch,
     Post,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesService } from './expenses.service';
 
+@ApiBearerAuth('access-token')
 @Controller('groups/:groupId/expenses')
 export class ExpensesController {
     constructor(private readonly expensesService: ExpensesService) {}

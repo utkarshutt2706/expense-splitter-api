@@ -9,11 +9,13 @@ import {
     Patch,
     Post,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsService } from './groups.service';
 
+@ApiBearerAuth('access-token')
 @Controller('groups')
 export class GroupsController {
     constructor(private readonly groupsService: GroupsService) {}
