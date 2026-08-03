@@ -14,11 +14,12 @@ model User {
   avatarUrl    String?
   passwordHash String?
 
-  groupMemberships GroupMember[]
-  expensesPaid     Expense[]      @relation("ExpensePaidBy")
-  expenseSplits    ExpenseSplit[]
-  paymentsSent     Payment[]      @relation("PaymentFrom")
-  paymentsReceived Payment[]      @relation("PaymentTo")
+  groupMemberships    GroupMember[]
+  expensesPaid        Expense[]         @relation("ExpensePaidBy")
+  expenseSplits       ExpenseSplit[]
+  paymentsSent        Payment[]         @relation("PaymentFrom")
+  paymentsReceived    Payment[]         @relation("PaymentTo")
+  invitationsSent     GroupInvitation[] @relation("InvitationInvitedBy")
 
   @@map("users")
 }
@@ -28,9 +29,10 @@ model Group {
   name      String
   createdAt DateTime @default(now())
 
-  members  GroupMember[]
-  expenses Expense[]
-  payments Payment[]
+  members     GroupMember[]
+  expenses    Expense[]
+  payments    Payment[]
+  invitations GroupInvitation[]
 
   @@map("groups")
 }
@@ -38,12 +40,39 @@ model Group {
 model GroupMember {
   groupId String
   userId  String
+  leftAt  DateTime?
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
   @@map("group_members")
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+
+  @@map("invitation_status")
+}
+
+model GroupInvitation {
+  id              String            @id @default(uuid())
+  groupId         String
+  email           String
+  invitedByUserId String
+  tokenHash       String            @unique
+  status          InvitationStatus  @default(pending)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime          @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("InvitationInvitedBy", fields: [invitedByUserId], references: [id])
+
+  @@map("group_invitations")
 }
 
 enum SplitType {
