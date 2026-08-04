@@ -1,5 +1,9 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+    ApiNotGroupMemberError,
+    ApiUnauthorizedError,
+} from '../common/decorators/api-common-errors.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
@@ -35,18 +39,8 @@ export class InvitationsController {
         type: ErrorResponseDto,
         example: errorExample('VALIDATION_ERROR', 'Email must be an email'),
     })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: errorExample('FORBIDDEN', 'You are not a member of this group'),
-    })
+    @ApiUnauthorizedError()
+    @ApiNotGroupMemberError()
     @ApiResponse({
         status: 409,
         description:

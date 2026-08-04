@@ -11,6 +11,11 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+    ApiGroupScopedErrors,
+    ApiNotGroupMemberError,
+    ApiUnauthorizedError,
+} from '../common/decorators/api-common-errors.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -18,13 +23,20 @@ import { ExpenseResponseDto } from './dto/expense-response.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesService } from './expenses.service';
 
-const UNAUTHORIZED_EXAMPLE = errorExample('UNAUTHORIZED', 'Invalid or expired token');
-const NOT_A_MEMBER_EXAMPLE = errorExample('FORBIDDEN', 'You are not a member of this group');
 const GROUP_NOT_FOUND_EXAMPLE = errorExample('NOT_FOUND', 'Group does-not-exist not found');
 const EXPENSE_NOT_FOUND_EXAMPLE = errorExample(
     'NOT_FOUND',
     'Expense does-not-exist not found in group group-daaru-party',
 );
+const EXPENSE_OR_GROUP_NOT_FOUND_RESPONSE = ApiResponse({
+    status: 404,
+    description: 'No group with that id, or no expense with that id in this group.',
+    type: ErrorResponseDto,
+    examples: {
+        groupNotFound: { summary: 'Group not found', value: GROUP_NOT_FOUND_EXAMPLE },
+        expenseNotFound: { summary: 'Expense not found', value: EXPENSE_NOT_FOUND_EXAMPLE },
+    },
+});
 
 @ApiBearerAuth('access-token')
 @UseGuards(GroupMembershipGuard)
@@ -93,24 +105,7 @@ export class ExpensesController {
             },
         },
     })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: UNAUTHORIZED_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: NOT_A_MEMBER_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'No group with that id.',
-        type: ErrorResponseDto,
-        example: GROUP_NOT_FOUND_EXAMPLE,
-    })
+    @ApiGroupScopedErrors()
     create(
         @Param('groupId') groupId: string,
         @Body() dto: CreateExpenseDto,
@@ -121,24 +116,7 @@ export class ExpensesController {
     @Get()
     @ApiOperation({ summary: 'List all expenses in a group' })
     @ApiResponse({ status: 200, description: 'The expenses.', type: [ExpenseResponseDto] })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: UNAUTHORIZED_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: NOT_A_MEMBER_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'No group with that id.',
-        type: ErrorResponseDto,
-        example: GROUP_NOT_FOUND_EXAMPLE,
-    })
+    @ApiGroupScopedErrors()
     findAllByGroup(@Param('groupId') groupId: string): Promise<ExpenseResponseDto[]> {
         return this.expensesService.findAllByGroup(groupId);
     }
@@ -151,27 +129,9 @@ export class ExpensesController {
             'group also 404s here.',
     })
     @ApiResponse({ status: 200, description: 'The expense.', type: ExpenseResponseDto })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: UNAUTHORIZED_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: NOT_A_MEMBER_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'No group with that id, or no expense with that id in this group.',
-        type: ErrorResponseDto,
-        examples: {
-            groupNotFound: { summary: 'Group not found', value: GROUP_NOT_FOUND_EXAMPLE },
-            expenseNotFound: { summary: 'Expense not found', value: EXPENSE_NOT_FOUND_EXAMPLE },
-        },
-    })
+    @ApiUnauthorizedError()
+    @ApiNotGroupMemberError()
+    @EXPENSE_OR_GROUP_NOT_FOUND_RESPONSE
     findOne(
         @Param('groupId') groupId: string,
         @Param('id') id: string,
@@ -196,27 +156,9 @@ export class ExpensesController {
             'submitted splits do not reconcile with the server-computed split',
         ),
     })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: UNAUTHORIZED_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: NOT_A_MEMBER_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'No group with that id, or no expense with that id in this group.',
-        type: ErrorResponseDto,
-        examples: {
-            groupNotFound: { summary: 'Group not found', value: GROUP_NOT_FOUND_EXAMPLE },
-            expenseNotFound: { summary: 'Expense not found', value: EXPENSE_NOT_FOUND_EXAMPLE },
-        },
-    })
+    @ApiUnauthorizedError()
+    @ApiNotGroupMemberError()
+    @EXPENSE_OR_GROUP_NOT_FOUND_RESPONSE
     update(
         @Param('groupId') groupId: string,
         @Param('id') id: string,
@@ -232,27 +174,9 @@ export class ExpensesController {
         description: "Cascades to the expense's own splits.",
     })
     @ApiResponse({ status: 204, description: 'Deleted.' })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: UNAUTHORIZED_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'The caller is not a member of this group.',
-        type: ErrorResponseDto,
-        example: NOT_A_MEMBER_EXAMPLE,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'No group with that id, or no expense with that id in this group.',
-        type: ErrorResponseDto,
-        examples: {
-            groupNotFound: { summary: 'Group not found', value: GROUP_NOT_FOUND_EXAMPLE },
-            expenseNotFound: { summary: 'Expense not found', value: EXPENSE_NOT_FOUND_EXAMPLE },
-        },
-    })
+    @ApiUnauthorizedError()
+    @ApiNotGroupMemberError()
+    @EXPENSE_OR_GROUP_NOT_FOUND_RESPONSE
     async remove(@Param('groupId') groupId: string, @Param('id') id: string): Promise<void> {
         await this.expensesService.remove(groupId, id);
     }
