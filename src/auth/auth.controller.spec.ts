@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 type MockedAuthService = {
     register: jest.Mock;
     login: jest.Mock;
+    changePassword: jest.Mock;
 };
 
 describe('AuthController', () => {
@@ -23,7 +24,7 @@ describe('AuthController', () => {
     };
 
     beforeEach(() => {
-        authService = { register: jest.fn(), login: jest.fn() };
+        authService = { register: jest.fn(), login: jest.fn(), changePassword: jest.fn() };
         controller = new AuthController(authService as unknown as AuthService);
     });
 
@@ -45,5 +46,15 @@ describe('AuthController', () => {
         const dto = { email: 'existing@example.com', password: 'password123' };
         await expect(controller.login(dto)).resolves.toEqual(tokenResponse);
         expect(authService.login).toHaveBeenCalledWith(dto);
+    });
+
+    it("delegates changePassword to the service with the caller's own id", async () => {
+        authService.changePassword.mockResolvedValue(undefined);
+
+        const dto = { currentPassword: 'old-password', newPassword: 'a-new-secure-password' };
+        await expect(
+            controller.changePassword({ sub: 'user-1', email: 'existing@example.com' }, dto),
+        ).resolves.toBeUndefined();
+        expect(authService.changePassword).toHaveBeenCalledWith('user-1', dto);
     });
 });

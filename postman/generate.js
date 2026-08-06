@@ -274,14 +274,61 @@ const loginItem = item(
 );
 loginItem.event = [captureAccessTokenScript];
 
+const changePasswordBody = {
+    currentPassword: 'correct-horse-battery-staple',
+    newPassword: 'a-new-secure-password',
+};
+const changePasswordItem = item(
+    'Change password',
+    req('PATCH', '/auth/password', { body: changePasswordBody }),
+    [
+        example(
+            '204 No Content',
+            req('PATCH', '/auth/password', { body: changePasswordBody }),
+            'No Content',
+            204,
+        ),
+        example(
+            '400 Validation Error - new password too short',
+            req('PATCH', '/auth/password', {
+                body: { currentPassword: changePasswordBody.currentPassword, newPassword: 'short' },
+            }),
+            'Bad Request',
+            400,
+            {
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'New password must be longer than or equal to 8 characters',
+                },
+            },
+        ),
+        example(
+            '401 Unauthorized - currentPassword is wrong',
+            req('PATCH', '/auth/password', {
+                body: {
+                    currentPassword: 'not-the-real-password',
+                    newPassword: 'a-new-secure-password',
+                },
+            }),
+            'Unauthorized',
+            401,
+            { error: { code: 'UNAUTHORIZED', message: 'Current password is incorrect' } },
+        ),
+        unauthorizedExample('/auth/password', 'PATCH', changePasswordBody),
+    ],
+    "Changes the caller's own password. Requires currentPassword even though the request is " +
+        "already authenticated via JWT -- a leaked/stolen token alone shouldn't be enough to lock " +
+        'the real account owner out.',
+);
+
 const authFolder = {
     name: 'Auth',
     description:
-        'Registration and login. Both are public and return `{ user, accessToken }` -- a 7-day-lived ' +
-        'JWT you send as `Authorization: Bearer <accessToken>` on every other request. Run either ' +
-        'request here first: both have a saved Test script that copies the returned accessToken into ' +
-        'the `accessToken` collection variable automatically.',
-    item: [registerItem, loginItem],
+        'Registration, login, and changing your own password. Register/Login are public and return ' +
+        '`{ user, accessToken }` -- a 7-day-lived JWT you send as `Authorization: Bearer <accessToken>` ' +
+        'on every other request. Run either request here first: both have a saved Test script that ' +
+        'copies the returned accessToken into the `accessToken` collection variable automatically.',
+    item: [registerItem, loginItem, changePasswordItem],
 };
 
 // =====================================================================
