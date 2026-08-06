@@ -11,6 +11,7 @@ describe('invitation email template', () => {
         groupName: 'Goa Trip',
         inviterName: 'Alice',
         expiresAt: new Date('2026-08-13T00:00:00.000Z'),
+        frontendUrl: 'https://frontend.example.com',
     };
 
     describe('invitationEmailSubject', () => {
@@ -22,12 +23,13 @@ describe('invitation email template', () => {
     });
 
     describe('invitationEmailHtml', () => {
-        it('includes the inviter, group name, and a base64-embedded logo', () => {
+        it('includes the inviter, group name, and a hosted (not embedded) logo', () => {
             const html = invitationEmailHtml(content);
 
             expect(html).toContain('Alice');
             expect(html).toContain('Goa Trip');
-            expect(html).toContain('data:image/svg+xml;base64,');
+            expect(html).toContain('https://frontend.example.com/web-app-manifest-192x192.png');
+            expect(html).not.toContain('data:image');
         });
 
         it('includes the invite link both as a button and as plain fallback text', () => {

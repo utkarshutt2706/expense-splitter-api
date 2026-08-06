@@ -107,7 +107,8 @@ jobs:
       API_KEY: e2e-test-api-key-not-a-real-secret
       JWT_SECRET: e2e-test-jwt-secret-not-a-real-secret-either
       FRONTEND_URL: http://localhost:5173
-      RESEND_API_KEY: e2e-test-resend-key-not-a-real-secret
+      GMAIL_USER: e2e-test@example.com
+      GMAIL_APP_PASSWORD: e2e-test-app-password-not-a-real-secret
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v7

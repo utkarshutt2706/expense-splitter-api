@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import nodemailer, { Transporter } from 'nodemailer';
 import { EnvConfig } from '../config/env.validation';
 import {
     invitationEmailHtml,
@@ -14,33 +14,42 @@ export interface InvitationEmail {
     groupName: string;
     inviterName: string;
     expiresAt: Date;
+    frontendUrl: string;
 }
 
 @Injectable()
 export class MailService {
     private readonly logger = new Logger(MailService.name);
-    private readonly resend: Resend;
+    private readonly transporter: Transporter;
     private readonly from: string;
 
     constructor(private readonly configService: ConfigService<EnvConfig, true>) {
-        this.resend = new Resend(this.configService.get('RESEND_API_KEY', { infer: true }));
-        this.from = this.configService.get('MAIL_FROM', { infer: true });
+        const user = this.configService.get('GMAIL_USER', { infer: true });
+        this.transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user,
+                pass: this.configService.get('GMAIL_APP_PASSWORD', { infer: true }),
+            },
+        });
+        this.from = `Expense Splitter <${user}>`;
     }
 
     async sendInvitationEmail(email: InvitationEmail): Promise<void> {
-        const { error } = await this.resend.emails.send({
-            from: this.from,
-            to: email.to,
-            subject: invitationEmailSubject(email),
-            html: invitationEmailHtml(email),
-            text: invitationEmailText(email),
-        });
-
-        if (error) {
-            this.logger.error(`Failed to send invitation email to ${email.to}: ${error.message}`);
-            return;
+        try {
+            await this.transporter.sendMail({
+                from: this.from,
+                to: email.to,
+                subject: invitationEmailSubject(email),
+                html: invitationEmailHtml(email),
+                text: invitationEmailText(email),
+            });
+            this.logger.log(`Invitation email sent to ${email.to} for group "${email.groupName}"`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Failed to send invitation email to ${email.to}: ${message}`);
         }
-
-        this.logger.log(`Invitation email sent to ${email.to} for group "${email.groupName}"`);
     }
 }

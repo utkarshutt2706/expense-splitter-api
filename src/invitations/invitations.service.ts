@@ -73,6 +73,7 @@ export class InvitationsService {
             groupName: group.name,
             inviterName: inviter.name,
             expiresAt: invitation.expiresAt,
+            frontendUrl,
         });
 
         return this.toResponse(invitation);
