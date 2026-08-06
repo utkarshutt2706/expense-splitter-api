@@ -1,5 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
+import { BalancesService } from '../balances/balances.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
@@ -11,7 +17,10 @@ const ACTIVE_MEMBER = { leftAt: null };
 
 @Injectable()
 export class GroupsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly balancesService: BalancesService,
+    ) {}
 
     async create(creatorUserId: string, dto: CreateGroupDto): Promise<GroupResponseDto> {
         const memberIds = Array.from(new Set([creatorUserId, ...dto.memberIds]));
@@ -52,6 +61,14 @@ export class GroupsService {
     }
 
     async remove(id: string): Promise<void> {
+        const { balances } = await this.balancesService.getGroupBalances(id);
+        const unsettled = balances.filter((entry) => entry.balance !== 0);
+        if (unsettled.length > 0) {
+            throw new ConflictException(
+                'Cannot delete a group with unsettled balances -- everyone must be settled up first',
+            );
+        }
+
         try {
             await this.prisma.group.delete({ where: { id } });
         } catch (error) {
@@ -68,13 +85,31 @@ export class GroupsService {
             throw new NotFoundException(`Group ${id} not found`);
         }
 
+        let toRemove: string[] = [];
+        let toAdd: string[] = [];
+        if (dto.memberIds) {
+            const currentUserIds = new Set(existing.members.map((member) => member.userId));
+            const nextUserIds = new Set(dto.memberIds);
+            toRemove = [...currentUserIds].filter((userId) => !nextUserIds.has(userId));
+            toAdd = [...nextUserIds].filter((userId) => !currentUserIds.has(userId));
+
+            if (toRemove.length > 0) {
+                const { balances } = await this.balancesService.getGroupBalances(id);
+                const unsettled = balances.filter(
+                    (entry) => toRemove.includes(entry.userId) && entry.balance !== 0,
+                );
+                if (unsettled.length > 0) {
+                    throw new ConflictException(
+                        `Cannot remove member(s) with an unsettled balance: ${unsettled
+                            .map((entry) => entry.userId)
+                            .join(', ')}`,
+                    );
+                }
+            }
+        }
+
         try {
             if (dto.memberIds) {
-                const currentUserIds = new Set(existing.members.map((member) => member.userId));
-                const nextUserIds = new Set(dto.memberIds);
-                const toRemove = [...currentUserIds].filter((userId) => !nextUserIds.has(userId));
-                const toAdd = [...nextUserIds].filter((userId) => !currentUserIds.has(userId));
-
                 await this.prisma.$transaction([
                     this.prisma.groupMember.updateMany({
                         where: { groupId: id, userId: { in: toRemove } },

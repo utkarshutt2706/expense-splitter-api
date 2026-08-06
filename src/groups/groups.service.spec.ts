@@ -1,5 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
+import { BalancesService } from '../balances/balances.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupsService } from './groups.service';
 
@@ -26,6 +27,7 @@ describe('GroupsService', () => {
         };
         $transaction: jest.Mock;
     };
+    let balancesService: { getGroupBalances: jest.Mock };
 
     const createdAt = new Date('2026-07-01T00:00:00.000Z');
     const members: GroupMember[] = [
@@ -38,6 +40,10 @@ describe('GroupsService', () => {
         createdAt,
         members,
     };
+
+    function settledBalances(...userIds: string[]) {
+        return { balances: userIds.map((userId) => ({ userId, balance: 0 })), settlements: [] };
+    }
 
     beforeEach(() => {
         prisma = {
@@ -54,7 +60,13 @@ describe('GroupsService', () => {
             },
             $transaction: jest.fn(),
         };
-        service = new GroupsService(prisma as unknown as PrismaService);
+        balancesService = {
+            getGroupBalances: jest.fn().mockResolvedValue(settledBalances('user-1', 'user-2')),
+        };
+        service = new GroupsService(
+            prisma as unknown as PrismaService,
+            balancesService as unknown as BalancesService,
+        );
     });
 
     describe('create', () => {
@@ -155,10 +167,23 @@ describe('GroupsService', () => {
     });
 
     describe('remove', () => {
-        it('deletes a group', async () => {
+        it('deletes a group when every balance is settled', async () => {
             prisma.group.delete.mockResolvedValue(group);
 
             await expect(service.remove('group-1')).resolves.toBeUndefined();
+        });
+
+        it('throws ConflictException when any member has an unsettled balance', async () => {
+            balancesService.getGroupBalances.mockResolvedValue({
+                balances: [
+                    { userId: 'user-1', balance: 25 },
+                    { userId: 'user-2', balance: -25 },
+                ],
+                settlements: [],
+            });
+
+            await expect(service.remove('group-1')).rejects.toThrow(ConflictException);
+            expect(prisma.group.delete).not.toHaveBeenCalled();
         });
 
         it('throws NotFoundException when the group does not exist', async () => {
@@ -208,6 +233,33 @@ describe('GroupsService', () => {
             });
             expect(prisma.$transaction).toHaveBeenCalled();
             expect(prisma.group.update).not.toHaveBeenCalled();
+        });
+
+        it('checks balances only for the members actually being removed', async () => {
+            await service.update('group-1', { memberIds: ['user-2', 'user-3'] });
+
+            expect(balancesService.getGroupBalances).toHaveBeenCalledWith('group-1');
+        });
+
+        it('throws ConflictException when a member being removed has an unsettled balance', async () => {
+            balancesService.getGroupBalances.mockResolvedValue({
+                balances: [
+                    { userId: 'user-1', balance: 25 },
+                    { userId: 'user-2', balance: -25 },
+                ],
+                settlements: [],
+            });
+
+            const result = service.update('group-1', { memberIds: ['user-2', 'user-3'] });
+
+            await expect(result).rejects.toThrow(ConflictException);
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('does not check balances when no one is being removed', async () => {
+            await service.update('group-1', { memberIds: ['user-1', 'user-2', 'user-4'] });
+
+            expect(balancesService.getGroupBalances).not.toHaveBeenCalled();
         });
 
         it('clears leftAt when a previously removed member rejoins', async () => {
