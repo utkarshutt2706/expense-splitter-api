@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 const BRAND_COLOR = '#f27318';
 
-const logoDataUri = `data:image/png;base64,${readFileSync(join(__dirname, 'assets/logo.png')).toString('base64')}`;
+const logoDataUri = `data:image/svg+xml;base64,${readFileSync(join(__dirname, 'assets/logo.svg')).toString('base64')}`;
 
 export interface InvitationEmailContent {
     inviteUrl: string;

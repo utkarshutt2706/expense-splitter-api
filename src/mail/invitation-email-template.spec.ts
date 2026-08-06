@@ -27,7 +27,7 @@ describe('invitation email template', () => {
 
             expect(html).toContain('Alice');
             expect(html).toContain('Goa Trip');
-            expect(html).toContain('data:image/png;base64,');
+            expect(html).toContain('data:image/svg+xml;base64,');
         });
 
         it('includes the invite link both as a button and as plain fallback text', () => {
