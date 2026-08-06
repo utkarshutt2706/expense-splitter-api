@@ -2210,7 +2210,7 @@
                                 }
                             }
                         },
-                        "description": "Partial update. `memberIds`, when sent, fully replaces the current membership -- it is not a delta/patch of individual adds or removes."
+                        "description": "Partial update. `memberIds`, when sent, fully replaces the current membership -- it is not a delta/patch of individual adds or removes. Omitting a current member (including the caller leaving) is blocked with 409 while their balance in the group is unsettled."
                     },
                     "response": [
                         {
@@ -2382,6 +2382,48 @@
                             "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Group does-not-exist not found\"\n    }\n}"
                         },
                         {
+                            "name": "409 Conflict - removed member has an unsettled balance",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"memberIds\": [\n        \"current-user\"\n    ]\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"Cannot remove member(s) with an unsettled balance: friend-abhay\"\n    }\n}"
+                        },
+                        {
                             "name": "401 Unauthorized - missing/invalid token",
                             "originalRequest": {
                                 "method": "PATCH",
@@ -2497,7 +2539,7 @@
                                 "{{groupId}}"
                             ]
                         },
-                        "description": "Cascades: deletes the group's memberships, expenses, expense splits, and payments too."
+                        "description": "Cascades: deletes the group's memberships, expenses, expense splits, and payments too. Blocked with 409 while any member of the group has a non-zero balance."
                     },
                     "response": [
                         {
@@ -2565,6 +2607,39 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Group does-not-exist not found\"\n    }\n}"
+                        },
+                        {
+                            "name": "409 Conflict - group has unsettled balances",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}"
+                                    ]
+                                }
+                            },
+                            "status": "Conflict",
+                            "code": 409,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"Cannot delete a group with unsettled balances -- everyone must be settled up first\"\n    }\n}"
                         },
                         {
                             "name": "401 Unauthorized - missing/invalid token",
