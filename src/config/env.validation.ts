@@ -8,8 +8,8 @@ export const envSchema = z.object({
     API_KEY: z.string().min(16),
     JWT_SECRET: z.string().min(32),
     FRONTEND_URL: z.url(),
-    RESEND_API_KEY: z.string().min(1),
-    MAIL_FROM: z.string().min(1).default('Expense Splitter <onboarding@resend.dev>'),
+    GMAIL_USER: z.email(),
+    GMAIL_APP_PASSWORD: z.string().min(1),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

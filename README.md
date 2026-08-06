@@ -42,19 +42,21 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 3. **Generate two secrets** — `API_KEY` (gates the `/docs` page) and `JWT_SECRET`
    (signs auth tokens). Anything long, random, and different from each other works,
    e.g. `openssl rand -hex 32` run twice.
-4. **Sign up for [Resend](https://resend.com)** (free tier, no card required) and
-   create an API key — this is `RESEND_API_KEY`, used to send group invitation
-   emails. No domain verification needed to get started: the default `MAIL_FROM` in
-   `render.yaml` sends from `onboarding@resend.dev`, which works out of the box but
-   is capped at sending to your own Resend account email until you verify a domain
-   you own.
+4. **Generate a Gmail App Password** — group invitation emails send through Gmail's
+   SMTP relay using your own Gmail account, so no domain or third-party mail
+   provider is needed. This requires 2-Step Verification to be turned on for the
+   Google account first (**myaccount.google.com/security**), then generate an App
+   Password at **myaccount.google.com/apppasswords**. `GMAIL_USER` is that Gmail
+   address; `GMAIL_APP_PASSWORD` is the 16-character password it generates (spaces
+   don't matter). Regular Gmail accounts are capped at 500 sends/day, which is
+   fine at this scale.
 5. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
    click **New +** → **Blueprint**, and connect your fork. Render reads
    [`render.yaml`](render.yaml) automatically and provisions the service — build
    command, start command, region, and plan are all already defined there. You'll be
-   prompted for the four secrets it doesn't store in the file: `DATABASE_URL` (from
-   step 2), `API_KEY` and `JWT_SECRET` (from step 3), and `RESEND_API_KEY` (from step
-   4).
+   prompted for the five secrets it doesn't store in the file: `DATABASE_URL` (from
+   step 2), `API_KEY` and `JWT_SECRET` (from step 3), and `GMAIL_USER` and
+   `GMAIL_APP_PASSWORD` (from step 4).
 6. **Note your service URL** once it's live (something like
    `https://your-app.onrender.com`) — the frontend needs it.
 7. **Deploy the frontend.** Fork
@@ -128,11 +130,9 @@ JSON.
 - `API_KEY` — password for the `/docs` Basic Auth gate (see above)
 - `JWT_SECRET` — signs and verifies auth tokens; must be long and random, and
   different from `API_KEY`
-- `RESEND_API_KEY` — used to send group invitation emails via
-  [Resend](https://resend.com) (free tier)
-- `MAIL_FROM` — the invitation email's From address; defaults to
-  `Expense Splitter <onboarding@resend.dev>`, which only delivers to your own
-  Resend account email until you verify a domain you own
+- `GMAIL_USER` — the Gmail address group invitation emails are sent from (see above)
+- `GMAIL_APP_PASSWORD` — that account's App Password, generated at
+  myaccount.google.com/apppasswords (requires 2-Step Verification)
 
 ## Optional: code quality gate (SonarCloud)
 

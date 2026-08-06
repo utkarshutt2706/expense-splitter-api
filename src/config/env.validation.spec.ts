@@ -7,7 +7,8 @@ describe('validateEnv', () => {
         API_KEY: 'a-sufficiently-long-secret',
         JWT_SECRET: 'a-sufficiently-long-jwt-signing-secret',
         FRONTEND_URL: 'https://utkarshutt2706.github.io',
-        RESEND_API_KEY: 're_test_key',
+        GMAIL_USER: 'someone@gmail.com',
+        GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop',
     };
 
     it('accepts a valid config and applies defaults', () => {
@@ -17,7 +18,6 @@ describe('validateEnv', () => {
             ...validConfig,
             NODE_ENV: 'development',
             PORT: 3000,
-            MAIL_FROM: 'Expense Splitter <onboarding@resend.dev>',
         });
     });
 
@@ -58,16 +58,23 @@ describe('validateEnv', () => {
         );
     });
 
-    it('throws when RESEND_API_KEY is missing', () => {
+    it('throws when GMAIL_USER is missing', () => {
         const rest: Partial<typeof validConfig> = { ...validConfig };
-        delete rest.RESEND_API_KEY;
+        delete rest.GMAIL_USER;
 
         expect(() => validateEnv(rest)).toThrow('Invalid environment configuration');
     });
 
-    it('accepts an explicit MAIL_FROM, overriding the default', () => {
-        const result = validateEnv({ ...validConfig, MAIL_FROM: 'Custom <hello@example.com>' });
+    it('throws when GMAIL_USER is not a valid email', () => {
+        expect(() => validateEnv({ ...validConfig, GMAIL_USER: 'not-an-email' })).toThrow(
+            'Invalid environment configuration',
+        );
+    });
 
-        expect(result.MAIL_FROM).toBe('Custom <hello@example.com>');
+    it('throws when GMAIL_APP_PASSWORD is missing', () => {
+        const rest: Partial<typeof validConfig> = { ...validConfig };
+        delete rest.GMAIL_APP_PASSWORD;
+
+        expect(() => validateEnv(rest)).toThrow('Invalid environment configuration');
     });
 });

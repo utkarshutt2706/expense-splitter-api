@@ -20,7 +20,7 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: RESEND_API_KEY
+      - key: GMAIL_USER
         sync: false
-      - key: MAIL_FROM
-        value: Expense Splitter <onboarding@resend.dev>
+      - key: GMAIL_APP_PASSWORD
+        sync: false
