@@ -13,7 +13,11 @@ describe('InvitationValidationController', () => {
     });
 
     it('delegates validate to the service', async () => {
-        const response = { email: 'bob@example.com', group: { id: 'group-1', name: 'Goa Trip' } };
+        const response = {
+            email: 'bob@example.com',
+            group: { id: 'group-1', name: 'Goa Trip' },
+            inviterName: 'Alice',
+        };
         invitationsService.validate.mockResolvedValue(response);
 
         await expect(controller.validate('raw-token')).resolves.toEqual(response);

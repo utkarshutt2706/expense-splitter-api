@@ -117,6 +117,7 @@ describe('InvitationsService', () => {
                 ...invitation,
                 expiresAt: new Date(Date.now() - 1000),
                 group: { id: 'group-1', name: 'Goa Trip' },
+                invitedBy: { name: 'Alice' },
             });
 
             await expect(service.validate('some-token')).rejects.toThrow(ConflictException);
@@ -127,20 +128,23 @@ describe('InvitationsService', () => {
                 ...invitation,
                 status: 'accepted',
                 group: { id: 'group-1', name: 'Goa Trip' },
+                invitedBy: { name: 'Alice' },
             });
 
             await expect(service.validate('some-token')).rejects.toThrow(ConflictException);
         });
 
-        it('returns the email and group for a valid pending invitation', async () => {
+        it('returns the email, group, and inviter name for a valid pending invitation', async () => {
             prisma.groupInvitation.findUnique.mockResolvedValue({
                 ...invitation,
                 group: { id: 'group-1', name: 'Goa Trip' },
+                invitedBy: { name: 'Alice' },
             });
 
             await expect(service.validate('some-token')).resolves.toEqual({
                 email: 'bob@example.com',
                 group: { id: 'group-1', name: 'Goa Trip' },
+                inviterName: 'Alice',
             });
         });
     });

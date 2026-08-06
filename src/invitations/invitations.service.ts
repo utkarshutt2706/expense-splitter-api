@@ -81,7 +81,7 @@ export class InvitationsService {
     async validate(rawToken: string): Promise<ValidateInvitationResponseDto> {
         const invitation = await this.prisma.groupInvitation.findUnique({
             where: { tokenHash: hashInvitationToken(rawToken) },
-            include: { group: true },
+            include: { group: true, invitedBy: true },
         });
         if (!invitation) {
             throw new NotFoundException('Invitation not found');
@@ -92,6 +92,7 @@ export class InvitationsService {
         return {
             email: invitation.email,
             group: { id: invitation.group.id, name: invitation.group.name },
+            inviterName: invitation.invitedBy.name,
         };
     }
 
