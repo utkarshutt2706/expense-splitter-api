@@ -1,15 +1,16 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 const BRAND_COLOR = '#f27318';
-
-const logoDataUri = `data:image/svg+xml;base64,${readFileSync(join(__dirname, 'assets/logo.svg')).toString('base64')}`;
+const LOGO_FILENAME = 'web-app-manifest-192x192.png';
 
 export interface InvitationEmailContent {
     inviteUrl: string;
     groupName: string;
     inviterName: string;
     expiresAt: Date;
+    // The frontend's own base URL (no trailing slash) -- used to reference its
+    // already-deployed logo as a real hosted image. Gmail (and others) widely
+    // block base64/data-URI images regardless of format, so embedding the logo
+    // never rendered reliably; a normal hosted <img src> does.
+    frontendUrl: string;
 }
 
 function formatExpiry(expiresAt: Date): string {
@@ -30,7 +31,10 @@ export function invitationEmailHtml({
     groupName,
     inviterName,
     expiresAt,
+    frontendUrl,
 }: InvitationEmailContent): string {
+    const logoUrl = `${frontendUrl}/${LOGO_FILENAME}`;
+
     return `<!doctype html>
 <html>
   <head>
@@ -45,7 +49,7 @@ export function invitationEmailHtml({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <tr>
               <td align="center" style="background-color:${BRAND_COLOR};padding:32px 24px;">
-                <img src="${logoDataUri}" width="56" height="56" alt="Expense Splitter" style="display:block;margin:0 auto 12px;" />
+                <img src="${logoUrl}" width="56" height="56" alt="Expense Splitter" style="display:block;margin:0 auto 12px;" />
                 <span style="color:#ffffff;font-size:20px;font-weight:600;letter-spacing:-0.01em;">Expense Splitter</span>
               </td>
             </tr>
