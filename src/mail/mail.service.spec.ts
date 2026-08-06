@@ -34,7 +34,9 @@ describe('MailService', () => {
 
     it('creates a Gmail SMTP transport with the configured credentials', () => {
         expect(nodemailer.createTransport).toHaveBeenCalledWith({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
             auth: { user: 'utkarshutt2706@gmail.com', pass: 'an-app-password' },
         });
     });

@@ -26,7 +26,9 @@ export class MailService {
     constructor(private readonly configService: ConfigService<EnvConfig, true>) {
         const user = this.configService.get('GMAIL_USER', { infer: true });
         this.transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
             auth: {
                 user,
                 pass: this.configService.get('GMAIL_APP_PASSWORD', { infer: true }),
