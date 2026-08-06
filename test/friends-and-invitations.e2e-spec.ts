@@ -144,6 +144,7 @@ describe('Friends and invitations (e2e)', () => {
         expect(validateResponse.body).toEqual({
             email: unregisteredEmail,
             group: { id: groupId, name: 'Goa Trip' },
+            inviterName: 'Alice',
         });
 
         userC = await registerUser(app, 'Charlie', {

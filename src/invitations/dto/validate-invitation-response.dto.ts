@@ -6,4 +6,5 @@ class InvitationGroupDto {
 export class ValidateInvitationResponseDto {
     email: string;
     group: InvitationGroupDto;
+    inviterName: string;
 }
