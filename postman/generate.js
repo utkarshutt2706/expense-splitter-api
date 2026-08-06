@@ -125,15 +125,11 @@ const healthFolder = {
             'Check API health',
             req('GET', '/health', { noAuth: true }),
             [
-                example(
-                    '200 OK',
-                    req('GET', '/health', { noAuth: true }),
-                    'OK',
-                    200,
-                    { status: 'ok' },
-                ),
+                example('200 OK', req('GET', '/health', { noAuth: true }), 'OK', 200, {
+                    status: 'ok',
+                }),
             ],
-            'Always public. Useful as an uptime pinger target since Render\'s free tier spins the service down after idling.',
+            "Always public. Useful as an uptime pinger target since Render's free tier spins the service down after idling.",
         ),
     ],
 };
@@ -348,22 +344,22 @@ const usersFolder = {
                         },
                     },
                 ),
-                unauthorizedExample('/users/lookup?email=' + encodeURIComponent(USERS.abhay.email), 'GET'),
+                unauthorizedExample(
+                    '/users/lookup?email=' + encodeURIComponent(USERS.abhay.email),
+                    'GET',
+                ),
             ],
-            'Exact match only -- used by the frontend when a searched email/phone isn\'t already in the ' +
+            "Exact match only -- used by the frontend when a searched email/phone isn't already in the " +
                 'caller\'s friend list, to decide between "add directly" (found) and "invite by email" (not found).',
         ),
         item(
             'My friends',
             req('GET', '/users/me/friends'),
             [
-                example(
-                    '200 OK',
-                    req('GET', '/users/me/friends'),
-                    'OK',
-                    200,
-                    [USERS.abhay, USERS.divanshu],
-                ),
+                example('200 OK', req('GET', '/users/me/friends'), 'OK', 200, [
+                    USERS.abhay,
+                    USERS.divanshu,
+                ]),
                 unauthorizedExample('/users/me/friends', 'GET'),
             ],
             'Derived, not stored: every user the caller has ever shared a group with (bidirectional, ' +
@@ -407,29 +403,19 @@ const usersFolder = {
                 ),
                 unauthorizedExample('/users/batch', 'POST', { ids: [USERS.abhay.id] }),
             ],
-            'Resolves a group\'s memberIds (or an expense\'s split userIds) to display-ready user ' +
-                'records in one call, since there\'s no unfiltered GET /users to fetch everyone and ' +
-                'filter client-side anymore. IDs are opaque UUIDs, so this isn\'t an enumeration risk -- ' +
+            "Resolves a group's memberIds (or an expense's split userIds) to display-ready user " +
+                "records in one call, since there's no unfiltered GET /users to fetch everyone and " +
+                "filter client-side anymore. IDs are opaque UUIDs, so this isn't an enumeration risk -- " +
                 'you can only look up IDs you already have from data you were authorized to see.',
         ),
         item(
             'Get user by id',
             req('GET', '/users/{{userId}}'),
             [
-                example(
-                    '200 OK',
-                    req('GET', '/users/{{userId}}'),
-                    'OK',
-                    200,
-                    USERS.current,
-                ),
-                example(
-                    '404 Not Found',
-                    req('GET', '/users/does-not-exist'),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'User does-not-exist not found' } },
-                ),
+                example('200 OK', req('GET', '/users/{{userId}}'), 'OK', 200, USERS.current),
+                example('404 Not Found', req('GET', '/users/does-not-exist'), 'Not Found', 404, {
+                    error: { code: 'NOT_FOUND', message: 'User does-not-exist not found' },
+                }),
                 unauthorizedExample('/users/{{userId}}', 'GET'),
             ],
             '{{userId}} defaults to the seeded current-user.',
@@ -464,7 +450,12 @@ const usersFolder = {
                     req('PATCH', '/users/{{userId}}', { body: { email: USERS.abhay.email } }),
                     'Conflict',
                     409,
-                    { error: { code: 'CONFLICT', message: 'A user with this email already exists' } },
+                    {
+                        error: {
+                            code: 'CONFLICT',
+                            message: 'A user with this email already exists',
+                        },
+                    },
                 ),
                 unauthorizedExample('/users/{{userId}}', 'PATCH', { name: 'Utkarsh S.' }),
                 example(
@@ -472,7 +463,12 @@ const usersFolder = {
                     req('PATCH', '/users/{{userId}}', { body: { name: 'Utkarsh S.' } }),
                     'Forbidden',
                     403,
-                    { error: { code: 'FORBIDDEN', message: 'You can only modify your own account' } },
+                    {
+                        error: {
+                            code: 'FORBIDDEN',
+                            message: 'You can only modify your own account',
+                        },
+                    },
                 ),
             ],
             'Partial update -- send only the fields you want to change. Self only: {{userId}} must match the caller.',
@@ -482,13 +478,9 @@ const usersFolder = {
             req('DELETE', '/users/{{userId}}'),
             [
                 example('204 No Content', req('DELETE', '/users/{{userId}}'), 'No Content', 204),
-                example(
-                    '404 Not Found',
-                    req('DELETE', '/users/does-not-exist'),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'User does-not-exist not found' } },
-                ),
+                example('404 Not Found', req('DELETE', '/users/does-not-exist'), 'Not Found', 404, {
+                    error: { code: 'NOT_FOUND', message: 'User does-not-exist not found' },
+                }),
                 example(
                     '409 Conflict - user has expenses/group history',
                     req('DELETE', '/users/{{userId}}'),
@@ -497,7 +489,8 @@ const usersFolder = {
                     {
                         error: {
                             code: 'CONFLICT',
-                            message: 'Cannot delete a user referenced by an existing group or expense',
+                            message:
+                                'Cannot delete a user referenced by an existing group or expense',
                         },
                     },
                 ),
@@ -507,7 +500,12 @@ const usersFolder = {
                     req('DELETE', '/users/{{userId}}'),
                     'Forbidden',
                     403,
-                    { error: { code: 'FORBIDDEN', message: 'You can only modify your own account' } },
+                    {
+                        error: {
+                            code: 'FORBIDDEN',
+                            message: 'You can only modify your own account',
+                        },
+                    },
                 ),
             ],
             'Blocked with 409 if the user has paid for or split any expense, or sent/received a payment. Self only: {{userId}} must match the caller.',
@@ -575,23 +573,17 @@ const groupsFolder = {
             ],
             'memberIds must be non-empty, unique, and each reference an existing user.',
         ),
-        item(
-            'List groups',
-            req('GET', '/groups'),
-            [example('200 OK', req('GET', '/groups'), 'OK', 200, [groupResponse()])],
-        ),
+        item('List groups', req('GET', '/groups'), [
+            example('200 OK', req('GET', '/groups'), 'OK', 200, [groupResponse()]),
+        ]),
         item(
             'Get group by id',
             req('GET', '/groups/{{groupId}}'),
             [
                 example('200 OK', req('GET', '/groups/{{groupId}}'), 'OK', 200, groupResponse()),
-                example(
-                    '404 Not Found',
-                    req('GET', '/groups/does-not-exist'),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
-                ),
+                example('404 Not Found', req('GET', '/groups/does-not-exist'), 'Not Found', 404, {
+                    error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' },
+                }),
                 unauthorizedExample('/groups/{{groupId}}', 'GET'),
                 forbiddenExample('/groups/{{groupId}}', 'GET'),
             ],
@@ -619,7 +611,9 @@ const groupsFolder = {
                 ),
                 example(
                     '400 Bad Request - memberId does not reference a user',
-                    req('PATCH', '/groups/{{groupId}}', { body: { memberIds: ['does-not-exist'] } }),
+                    req('PATCH', '/groups/{{groupId}}', {
+                        body: { memberIds: ['does-not-exist'] },
+                    }),
                     'Bad Request',
                     400,
                     {
@@ -636,10 +630,24 @@ const groupsFolder = {
                     404,
                     { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
                 ),
+                example(
+                    '409 Conflict - removed member has an unsettled balance',
+                    req('PATCH', '/groups/{{groupId}}', {
+                        body: { memberIds: [USERS.current.id] },
+                    }),
+                    'Conflict',
+                    409,
+                    {
+                        error: {
+                            code: 'CONFLICT',
+                            message: `Cannot remove member(s) with an unsettled balance: ${USERS.abhay.id}`,
+                        },
+                    },
+                ),
                 unauthorizedExample('/groups/{{groupId}}', 'PATCH', { name: 'Daaru Party 2.0' }),
                 forbiddenExample('/groups/{{groupId}}', 'PATCH', { name: 'Daaru Party 2.0' }),
             ],
-            'Partial update. `memberIds`, when sent, fully replaces the current membership -- it is not a delta/patch of individual adds or removes.',
+            'Partial update. `memberIds`, when sent, fully replaces the current membership -- it is not a delta/patch of individual adds or removes. Omitting a current member (including the caller leaving) is blocked with 409 while their balance in the group is unsettled.',
         ),
         item(
             'Delete group',
@@ -653,10 +661,23 @@ const groupsFolder = {
                     404,
                     { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
                 ),
+                example(
+                    '409 Conflict - group has unsettled balances',
+                    req('DELETE', '/groups/{{groupId}}'),
+                    'Conflict',
+                    409,
+                    {
+                        error: {
+                            code: 'CONFLICT',
+                            message:
+                                'Cannot delete a group with unsettled balances -- everyone must be settled up first',
+                        },
+                    },
+                ),
                 unauthorizedExample('/groups/{{groupId}}', 'DELETE'),
                 forbiddenExample('/groups/{{groupId}}', 'DELETE'),
             ],
-            'Cascades: deletes the group\'s memberships, expenses, expense splits, and payments too.',
+            "Cascades: deletes the group's memberships, expenses, expense splits, and payments too. Blocked with 409 while any member of the group has a non-zero balance.",
         ),
     ],
 };
@@ -687,28 +708,36 @@ const invitationsFolder = {
             [
                 example(
                     '201 Created',
-                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
+                    req('POST', '/groups/{{groupId}}/invitations', {
+                        body: { email: inviteEmail },
+                    }),
                     'Created',
                     201,
                     invitationResponse(),
                 ),
                 example(
                     '200 OK - a pending invitation for this email already exists (idempotent)',
-                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
+                    req('POST', '/groups/{{groupId}}/invitations', {
+                        body: { email: inviteEmail },
+                    }),
                     'OK',
                     200,
                     invitationResponse(),
                 ),
                 example(
                     '400 Validation Error - malformed email',
-                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: 'not-an-email' } }),
+                    req('POST', '/groups/{{groupId}}/invitations', {
+                        body: { email: 'not-an-email' },
+                    }),
                     'Bad Request',
                     400,
                     { error: { code: 'VALIDATION_ERROR', message: 'Email must be an email' } },
                 ),
                 example(
                     '409 Conflict - email already belongs to a registered user',
-                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: USERS.abhay.email } }),
+                    req('POST', '/groups/{{groupId}}/invitations', {
+                        body: { email: USERS.abhay.email },
+                    }),
                     'Conflict',
                     409,
                     {
@@ -721,12 +750,21 @@ const invitationsFolder = {
                 ),
                 example(
                     '409 Conflict - email already an active member of this group',
-                    req('POST', '/groups/{{groupId}}/invitations', { body: { email: USERS.divanshu.email } }),
+                    req('POST', '/groups/{{groupId}}/invitations', {
+                        body: { email: USERS.divanshu.email },
+                    }),
                     'Conflict',
                     409,
-                    { error: { code: 'CONFLICT', message: 'This email is already a member of the group' } },
+                    {
+                        error: {
+                            code: 'CONFLICT',
+                            message: 'This email is already a member of the group',
+                        },
+                    },
                 ),
-                unauthorizedExample('/groups/{{groupId}}/invitations', 'POST', { email: inviteEmail }),
+                unauthorizedExample('/groups/{{groupId}}/invitations', 'POST', {
+                    email: inviteEmail,
+                }),
                 forbiddenExample('/groups/{{groupId}}/invitations', 'POST', { email: inviteEmail }),
             ],
             'Only for emails that are not yet registered. If the email already belongs to a registered ' +
@@ -794,7 +832,7 @@ const expenseResponse = (overrides = {}) => ({
 const expensesFolder = {
     name: 'Expenses',
     description:
-        'Nested under a group. The server independently recomputes the expected split from amount + splitType and rejects the write (400) if it doesn\'t reconcile with what you submitted -- never trust splits blindly.',
+        "Nested under a group. The server independently recomputes the expected split from amount + splitType and rejects the write (400) if it doesn't reconcile with what you submitted -- never trust splits blindly.",
     item: [
         item(
             'Create expense - equal split',
@@ -823,7 +861,8 @@ const expensesFolder = {
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'Description must be shorter than or equal to 500 characters; Description must be longer than or equal to 1 characters; Description must be a string',
+                            message:
+                                'Description must be shorter than or equal to 500 characters; Description must be longer than or equal to 1 characters; Description must be a string',
                         },
                     },
                 ),
@@ -842,7 +881,8 @@ const expensesFolder = {
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'submitted splits do not reconcile with the server-computed split',
+                            message:
+                                'submitted splits do not reconcile with the server-computed split',
                         },
                     },
                 ),
@@ -921,7 +961,12 @@ const expensesFolder = {
                     }),
                     'Bad Request',
                     400,
-                    { error: { code: 'VALIDATION_ERROR', message: 'shares is required for a shares split' } },
+                    {
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: 'shares is required for a shares split',
+                        },
+                    },
                 ),
                 example(
                     '400 Bad Request - paidByUserId/split userId does not reference a user',
@@ -933,7 +978,8 @@ const expensesFolder = {
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'paidByUserId or a split userId does not reference an existing user',
+                            message:
+                                'paidByUserId or a split userId does not reference an existing user',
                         },
                     },
                 ),
@@ -949,28 +995,20 @@ const expensesFolder = {
             ],
             'splitType is one of equal | exact | percentage | shares. equal recomputes from the participant userIds in `splits`; exact just validates `splits` sums to `amount`; percentage/shares require the matching `percentages`/`shares` array as additional input the server uses to recompute and validate `splits`. Largest-remainder rounding is used so cent-level splits always sum exactly to `amount`.',
         ),
-        item(
-            'List expenses by group',
-            req('GET', '/groups/{{groupId}}/expenses'),
-            [
-                example(
-                    '200 OK',
-                    req('GET', '/groups/{{groupId}}/expenses'),
-                    'OK',
-                    200,
-                    [expenseResponse({ id: 'expense-1' })],
-                ),
-                example(
-                    '404 Not Found - group does not exist',
-                    req('GET', '/groups/does-not-exist/expenses'),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
-                ),
-                unauthorizedExample('/groups/{{groupId}}/expenses', 'GET'),
-                forbiddenExample('/groups/{{groupId}}/expenses', 'GET'),
-            ],
-        ),
+        item('List expenses by group', req('GET', '/groups/{{groupId}}/expenses'), [
+            example('200 OK', req('GET', '/groups/{{groupId}}/expenses'), 'OK', 200, [
+                expenseResponse({ id: 'expense-1' }),
+            ]),
+            example(
+                '404 Not Found - group does not exist',
+                req('GET', '/groups/does-not-exist/expenses'),
+                'Not Found',
+                404,
+                { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
+            ),
+            unauthorizedExample('/groups/{{groupId}}/expenses', 'GET'),
+            forbiddenExample('/groups/{{groupId}}/expenses', 'GET'),
+        ]),
         item(
             'Get expense by id',
             req('GET', '/groups/{{groupId}}/expenses/{{expenseId}}'),
@@ -1031,7 +1069,8 @@ const expensesFolder = {
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'submitted splits do not reconcile with the server-computed split',
+                            message:
+                                'submitted splits do not reconcile with the server-computed split',
                         },
                     },
                 ),
@@ -1087,7 +1126,7 @@ const expensesFolder = {
                 unauthorizedExample('/groups/{{groupId}}/expenses/{{expenseId}}', 'DELETE'),
                 forbiddenExample('/groups/{{groupId}}/expenses/{{expenseId}}', 'DELETE'),
             ],
-            'Cascades to the expense\'s own splits.',
+            "Cascades to the expense's own splits.",
         ),
     ],
 };
@@ -1132,7 +1171,8 @@ const paymentsFolder = {
                     {
                         error: {
                             code: 'VALIDATION_ERROR',
-                            message: 'ToUserId must be longer than or equal to 1 characters; ToUserId must be a string; Amount must be a positive number; Amount must be a number conforming to the specified constraints',
+                            message:
+                                'ToUserId must be longer than or equal to 1 characters; ToUserId must be a string; Amount must be a positive number; Amount must be a number conforming to the specified constraints',
                         },
                     },
                 ),
@@ -1153,7 +1193,11 @@ const paymentsFolder = {
                 example(
                     '400 Bad Request - fromUserId/toUserId does not reference a user',
                     req('POST', '/groups/{{groupId}}/payments', {
-                        body: { fromUserId: 'does-not-exist', toUserId: USERS.divanshu.id, amount: 100 },
+                        body: {
+                            fromUserId: 'does-not-exist',
+                            toUserId: USERS.divanshu.id,
+                            amount: 100,
+                        },
                     }),
                     'Bad Request',
                     400,
@@ -1175,28 +1219,20 @@ const paymentsFolder = {
                 forbiddenExample('/groups/{{groupId}}/payments', 'POST', newPaymentBody),
             ],
         ),
-        item(
-            'List payments by group',
-            req('GET', '/groups/{{groupId}}/payments'),
-            [
-                example(
-                    '200 OK',
-                    req('GET', '/groups/{{groupId}}/payments'),
-                    'OK',
-                    200,
-                    [paymentResponse({ id: 'payment-1' })],
-                ),
-                example(
-                    '404 Not Found - group does not exist',
-                    req('GET', '/groups/does-not-exist/payments'),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
-                ),
-                unauthorizedExample('/groups/{{groupId}}/payments', 'GET'),
-                forbiddenExample('/groups/{{groupId}}/payments', 'GET'),
-            ],
-        ),
+        item('List payments by group', req('GET', '/groups/{{groupId}}/payments'), [
+            example('200 OK', req('GET', '/groups/{{groupId}}/payments'), 'OK', 200, [
+                paymentResponse({ id: 'payment-1' }),
+            ]),
+            example(
+                '404 Not Found - group does not exist',
+                req('GET', '/groups/does-not-exist/payments'),
+                'Not Found',
+                404,
+                { error: { code: 'NOT_FOUND', message: 'Group does-not-exist not found' } },
+            ),
+            unauthorizedExample('/groups/{{groupId}}/payments', 'GET'),
+            forbiddenExample('/groups/{{groupId}}/payments', 'GET'),
+        ]),
     ],
 };
 
@@ -1212,27 +1248,29 @@ const balancesFolder = {
             'Get group balances',
             req('GET', '/groups/{{groupId}}/balances'),
             [
-                example(
-                    '200 OK',
-                    req('GET', '/groups/{{groupId}}/balances'),
-                    'OK',
-                    200,
-                    {
-                        balances: [
-                            { userId: 'current-user', balance: -554.16 },
-                            { userId: 'friend-abhay', balance: -1376.63 },
-                            { userId: 'friend-divanshu', balance: 6393.16 },
-                            { userId: 'friend-abhinav', balance: -2307.85 },
-                            { userId: 'friend-khem', balance: -2154.52 },
-                        ],
-                        settlements: [
-                            { fromUserId: 'friend-abhinav', toUserId: 'friend-divanshu', amount: 2307.85 },
-                            { fromUserId: 'friend-khem', toUserId: 'friend-divanshu', amount: 2154.52 },
-                            { fromUserId: 'friend-abhay', toUserId: 'friend-divanshu', amount: 1376.63 },
-                            { fromUserId: 'current-user', toUserId: 'friend-divanshu', amount: 554.16 },
-                        ],
-                    },
-                ),
+                example('200 OK', req('GET', '/groups/{{groupId}}/balances'), 'OK', 200, {
+                    balances: [
+                        { userId: 'current-user', balance: -554.16 },
+                        { userId: 'friend-abhay', balance: -1376.63 },
+                        { userId: 'friend-divanshu', balance: 6393.16 },
+                        { userId: 'friend-abhinav', balance: -2307.85 },
+                        { userId: 'friend-khem', balance: -2154.52 },
+                    ],
+                    settlements: [
+                        {
+                            fromUserId: 'friend-abhinav',
+                            toUserId: 'friend-divanshu',
+                            amount: 2307.85,
+                        },
+                        { fromUserId: 'friend-khem', toUserId: 'friend-divanshu', amount: 2154.52 },
+                        {
+                            fromUserId: 'friend-abhay',
+                            toUserId: 'friend-divanshu',
+                            amount: 1376.63,
+                        },
+                        { fromUserId: 'current-user', toUserId: 'friend-divanshu', amount: 554.16 },
+                    ],
+                }),
                 example(
                     '404 Not Found',
                     req('GET', '/groups/does-not-exist/balances'),
@@ -1260,7 +1298,7 @@ const collection = {
             'the returned accessToken into the `accessToken` collection variable automatically, which ' +
             'the rest of the collection sends as `Authorization: Bearer {{accessToken}}`. Auth is ' +
             'per-user now, not a shared secret -- group-scoped endpoints (Groups get/update/delete, ' +
-            'all Expenses/Payments/Balances routes) additionally 403 if the caller isn\'t a member of ' +
+            "all Expenses/Payments/Balances routes) additionally 403 if the caller isn't a member of " +
             'that group.\n\n' +
             'Every endpoint below has saved example responses for its success case and every error ' +
             'case it can actually produce (400/401/403/404/409), generated from the real service code, ' +
@@ -1269,7 +1307,7 @@ const collection = {
             'CONFLICT, or ERROR/INTERNAL_ERROR as a fallback.\n\n' +
             'Set `baseUrl` to `http://localhost:3000` for local dev or your deployed Render URL. ' +
             '`groupId`/`userId`/`expenseId`/`paymentId` default to IDs from the seed script ' +
-            '(prisma/seed.ts) -- swap them for real IDs once you\'ve created your own data.',
+            "(prisma/seed.ts) -- swap them for real IDs once you've created your own data.",
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
     auth: {
@@ -1286,8 +1324,18 @@ const collection = {
         },
         { key: 'groupId', value: GROUP_ID, type: 'string' },
         { key: 'userId', value: USERS.current.id, type: 'string' },
-        { key: 'expenseId', value: '', type: 'string', description: 'Set after creating/listing an expense' },
-        { key: 'paymentId', value: '', type: 'string', description: 'Set after creating/listing a payment' },
+        {
+            key: 'expenseId',
+            value: '',
+            type: 'string',
+            description: 'Set after creating/listing an expense',
+        },
+        {
+            key: 'paymentId',
+            value: '',
+            type: 'string',
+            description: 'Set after creating/listing a payment',
+        },
         {
             key: 'inviteToken',
             value: '',
@@ -1322,4 +1370,6 @@ for (const folder of parsed.item) {
         exampleCount += (it.response || []).length;
     }
 }
-console.log(`${parsed.item.length} folders, ${requestCount} requests, ${exampleCount} saved examples`);
+console.log(
+    `${parsed.item.length} folders, ${requestCount} requests, ${exampleCount} saved examples`,
+);

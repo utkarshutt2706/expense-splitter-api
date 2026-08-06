@@ -35,9 +35,12 @@ describe('Expense journey (e2e)', () => {
 
     afterAll(async () => {
         if (groupId && creator) {
+            // Balances were settled earlier in the flow, so this is expected to
+            // succeed -- also exercises the "allowed once settled" path.
             await request(app.getHttpServer())
                 .delete(`/groups/${groupId}`)
-                .set('Authorization', `Bearer ${creator.accessToken}`);
+                .set('Authorization', `Bearer ${creator.accessToken}`)
+                .expect(204);
         }
         for (const user of [creator, member, outsider]) {
             if (!user) continue;
@@ -88,6 +91,31 @@ describe('Expense journey (e2e)', () => {
             .balances;
         expect(balances).toContainEqual({ userId: creator.user.id, balance: 50 });
         expect(balances).toContainEqual({ userId: member.user.id, balance: -50 });
+    });
+
+    it('refuses to delete the group while balances are unsettled', async () => {
+        const response = await request(app.getHttpServer())
+            .delete(`/groups/${groupId}`)
+            .set('Authorization', `Bearer ${creator.accessToken}`)
+            .expect(409);
+
+        expect((response.body as { error: { code: string } }).error.code).toBe('CONFLICT');
+    });
+
+    it('refuses to remove a member who still has an unsettled balance', async () => {
+        const response = await request(app.getHttpServer())
+            .patch(`/groups/${groupId}`)
+            .set('Authorization', `Bearer ${creator.accessToken}`)
+            .send({ memberIds: [creator.user.id] })
+            .expect(409);
+
+        expect((response.body as { error: { code: string } }).error.code).toBe('CONFLICT');
+
+        const groupResponse = await request(app.getHttpServer())
+            .get(`/groups/${groupId}`)
+            .set('Authorization', `Bearer ${creator.accessToken}`)
+            .expect(200);
+        expect((groupResponse.body as { memberIds: string[] }).memberIds).toContain(member.user.id);
     });
 
     it('settles the debt with a payment', async () => {

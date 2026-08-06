@@ -102,6 +102,18 @@ export class GroupsController {
             'One or more memberIds do not reference an existing user',
         ),
     })
+    @ApiResponse({
+        status: 409,
+        description:
+            'memberIds omits one or more current members who still have an unsettled balance ' +
+            '(including a member removing themselves) -- they must be settled up before leaving ' +
+            'or being removed.',
+        type: ErrorResponseDto,
+        example: errorExample(
+            'CONFLICT',
+            'Cannot remove member(s) with an unsettled balance: user-1',
+        ),
+    })
     @ApiGroupScopedErrors()
     update(@Param('id') id: string, @Body() dto: UpdateGroupDto): Promise<GroupResponseDto> {
         return this.groupsService.update(id, dto);
@@ -114,9 +126,18 @@ export class GroupsController {
         summary: 'Delete a group',
         description:
             "Cascades: deletes the group's memberships, expenses, expense splits, payments, and " +
-            'invitations too.',
+            'invitations too. Every member must have a zero balance first.',
     })
     @ApiResponse({ status: 204, description: 'Deleted.' })
+    @ApiResponse({
+        status: 409,
+        description: 'One or more members still have an unsettled balance.',
+        type: ErrorResponseDto,
+        example: errorExample(
+            'CONFLICT',
+            'Cannot delete a group with unsettled balances -- everyone must be settled up first',
+        ),
+    })
     @ApiGroupScopedErrors()
     async remove(@Param('id') id: string): Promise<void> {
         await this.groupsService.remove(id);
