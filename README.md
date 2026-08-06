@@ -42,18 +42,25 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 3. **Generate two secrets** — `API_KEY` (gates the `/docs` page) and `JWT_SECRET`
    (signs auth tokens). Anything long, random, and different from each other works,
    e.g. `openssl rand -hex 32` run twice.
-4. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
+4. **Sign up for [Resend](https://resend.com)** (free tier, no card required) and
+   create an API key — this is `RESEND_API_KEY`, used to send group invitation
+   emails. No domain verification needed to get started: the default `MAIL_FROM` in
+   `render.yaml` sends from `onboarding@resend.dev`, which works out of the box but
+   is capped at sending to your own Resend account email until you verify a domain
+   you own.
+5. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
    click **New +** → **Blueprint**, and connect your fork. Render reads
    [`render.yaml`](render.yaml) automatically and provisions the service — build
    command, start command, region, and plan are all already defined there. You'll be
-   prompted for the three secrets it doesn't store in the file: `DATABASE_URL` (from
-   step 2), `API_KEY`, and `JWT_SECRET` (both from step 3).
-5. **Note your service URL** once it's live (something like
+   prompted for the four secrets it doesn't store in the file: `DATABASE_URL` (from
+   step 2), `API_KEY` and `JWT_SECRET` (from step 3), and `RESEND_API_KEY` (from step
+   4).
+6. **Note your service URL** once it's live (something like
    `https://your-app.onrender.com`) — the frontend needs it.
-6. **Deploy the frontend.** Fork
+7. **Deploy the frontend.** Fork
    [expense-splitter](https://github.com/utkarshutt2706/expense-splitter) and follow
    its own README, pointing it at your backend's URL.
-7. If your frontend ends up on a different origin than the default
+8. If your frontend ends up on a different origin than the default
    `CORS_ALLOWED_ORIGINS` value in `render.yaml`, update it (in the file or directly
    in Render's dashboard under Environment) to match — otherwise the browser will
    block requests to your API.
@@ -117,9 +124,15 @@ JSON.
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
 - `NODE_ENV`
+- `FRONTEND_URL` — base URL the invitation email's accept link points at
 - `API_KEY` — password for the `/docs` Basic Auth gate (see above)
 - `JWT_SECRET` — signs and verifies auth tokens; must be long and random, and
   different from `API_KEY`
+- `RESEND_API_KEY` — used to send group invitation emails via
+  [Resend](https://resend.com) (free tier)
+- `MAIL_FROM` — the invitation email's From address; defaults to
+  `Expense Splitter <onboarding@resend.dev>`, which only delivers to your own
+  Resend account email until you verify a domain you own
 
 ## Optional: code quality gate (SonarCloud)
 

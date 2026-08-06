@@ -67,11 +67,12 @@ export class InvitationsService {
         });
 
         const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
-        this.mailService.sendInvitationEmail({
+        await this.mailService.sendInvitationEmail({
             to: dto.email,
             inviteUrl: `${frontendUrl}/register?invite=${rawToken}`,
             groupName: group.name,
             inviterName: inviter.name,
+            expiresAt: invitation.expiresAt,
         });
 
         return this.toResponse(invitation);

@@ -7,6 +7,7 @@ describe('validateEnv', () => {
         API_KEY: 'a-sufficiently-long-secret',
         JWT_SECRET: 'a-sufficiently-long-jwt-signing-secret',
         FRONTEND_URL: 'https://utkarshutt2706.github.io',
+        RESEND_API_KEY: 're_test_key',
     };
 
     it('accepts a valid config and applies defaults', () => {
@@ -16,6 +17,7 @@ describe('validateEnv', () => {
             ...validConfig,
             NODE_ENV: 'development',
             PORT: 3000,
+            MAIL_FROM: 'Expense Splitter <onboarding@resend.dev>',
         });
     });
 
@@ -54,5 +56,18 @@ describe('validateEnv', () => {
         expect(() => validateEnv({ ...validConfig, NODE_ENV: 'staging' })).toThrow(
             'Invalid environment configuration',
         );
+    });
+
+    it('throws when RESEND_API_KEY is missing', () => {
+        const rest: Partial<typeof validConfig> = { ...validConfig };
+        delete rest.RESEND_API_KEY;
+
+        expect(() => validateEnv(rest)).toThrow('Invalid environment configuration');
+    });
+
+    it('accepts an explicit MAIL_FROM, overriding the default', () => {
+        const result = validateEnv({ ...validConfig, MAIL_FROM: 'Custom <hello@example.com>' });
+
+        expect(result.MAIL_FROM).toBe('Custom <hello@example.com>');
     });
 });
