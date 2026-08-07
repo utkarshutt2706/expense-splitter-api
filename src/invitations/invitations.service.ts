@@ -67,7 +67,10 @@ export class InvitationsService {
         });
 
         const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
-        await this.mailService.sendInvitationEmail({
+        // Best-effort and never awaited -- email delivery isn't reliable on every
+        // host (e.g. outbound SMTP ports blocked on some free tiers), and a slow
+        // or failed send must never hold up this response.
+        void this.mailService.sendInvitationEmail({
             to: dto.email,
             inviteUrl: `${frontendUrl}/register?invite=${rawToken}`,
             groupName: group.name,

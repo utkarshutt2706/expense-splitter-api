@@ -75,13 +75,15 @@ describe('InvitationsService', () => {
             expect(mailService.sendInvitationEmail).not.toHaveBeenCalled();
         });
 
-        it('creates a new invitation and sends the email', async () => {
+        it('creates a new invitation and fires the email without awaiting it', async () => {
             prisma.user.findUnique.mockResolvedValue(null);
             prisma.groupMember.findFirst.mockResolvedValue(null);
             prisma.groupInvitation.findFirst.mockResolvedValue(null);
             prisma.group.findUniqueOrThrow.mockResolvedValue({ id: 'group-1', name: 'Goa Trip' });
             prisma.user.findUniqueOrThrow.mockResolvedValue({ id: 'user-1', name: 'Alice' });
             prisma.groupInvitation.create.mockResolvedValue(invitation);
+            // Never resolves -- if create() awaited this, the test would time out.
+            mailService.sendInvitationEmail.mockReturnValue(new Promise(() => {}));
 
             const result = await service.create('group-1', 'user-1', { email: 'bob@example.com' });
 

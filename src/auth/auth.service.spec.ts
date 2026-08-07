@@ -26,7 +26,7 @@ describe('AuthService', () => {
         groupInvitation: { findUnique: jest.Mock; update: jest.Mock };
     };
     let prisma: {
-        user: { findUnique: jest.Mock };
+        user: { findUnique: jest.Mock; update: jest.Mock };
         $transaction: jest.Mock;
     };
     let jwtService: { signAsync: jest.Mock };
@@ -38,7 +38,7 @@ describe('AuthService', () => {
             groupInvitation: { findUnique: jest.fn(), update: jest.fn() },
         };
         prisma = {
-            user: { findUnique: jest.fn() },
+            user: { findUnique: jest.fn(), update: jest.fn() },
             $transaction: jest.fn((callback: (tx: unknown) => unknown) => callback(tx)),
         };
         jwtService = { signAsync: jest.fn().mockResolvedValue('signed-jwt-token') };
@@ -245,6 +245,62 @@ describe('AuthService', () => {
 
             await expect(
                 service.login({ email: 'existing@example.com', password: 'wrong-password' }),
+            ).rejects.toThrow(UnauthorizedException);
+        });
+    });
+
+    describe('changePassword', () => {
+        it('hashes and stores the new password when currentPassword is correct', async () => {
+            const passwordHash = await hashPassword('old-password');
+            prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+
+            await service.changePassword('user-1', {
+                currentPassword: 'old-password',
+                newPassword: 'a-new-secure-password',
+            });
+
+            const updateMock = prisma.user.update as jest.Mock<
+                unknown,
+                [{ where: { id: string }; data: { passwordHash: string } }]
+            >;
+            const updateArgs = updateMock.mock.calls[0][0];
+            expect(updateArgs.where).toEqual({ id: 'user-1' });
+            expect(updateArgs.data.passwordHash).not.toBe('a-new-secure-password');
+            expect(updateArgs.data.passwordHash).not.toBe(passwordHash);
+        });
+
+        it('throws UnauthorizedException when currentPassword is wrong', async () => {
+            const passwordHash = await hashPassword('old-password');
+            prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+
+            await expect(
+                service.changePassword('user-1', {
+                    currentPassword: 'wrong-password',
+                    newPassword: 'a-new-secure-password',
+                }),
+            ).rejects.toThrow(UnauthorizedException);
+            expect(prisma.user.update).not.toHaveBeenCalled();
+        });
+
+        it('throws UnauthorizedException when the user has never set a password', async () => {
+            prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: null });
+
+            await expect(
+                service.changePassword('user-1', {
+                    currentPassword: 'anything',
+                    newPassword: 'a-new-secure-password',
+                }),
+            ).rejects.toThrow(UnauthorizedException);
+        });
+
+        it('throws UnauthorizedException when the user does not exist', async () => {
+            prisma.user.findUnique.mockResolvedValue(null);
+
+            await expect(
+                service.changePassword('missing-user', {
+                    currentPassword: 'anything',
+                    newPassword: 'a-new-secure-password',
+                }),
             ).rejects.toThrow(UnauthorizedException);
         });
     });

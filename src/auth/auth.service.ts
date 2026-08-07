@@ -12,6 +12,7 @@ import { hashInvitationToken } from '../invitations/invitation-token';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { hashPassword, verifyPassword } from './password-hasher';
@@ -67,6 +68,23 @@ export class AuthService {
         }
 
         return this.toTokenResponse(user);
+    }
+
+    async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+        // Still requires the current password even though the caller is already
+        // authenticated via JWT -- a leaked/stolen token alone shouldn't be
+        // enough to lock the real account owner out.
+        if (
+            !user?.passwordHash ||
+            !(await verifyPassword(dto.currentPassword, user.passwordHash))
+        ) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        const passwordHash = await hashPassword(dto.newPassword);
+        await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
     }
 
     private async validateInvitationForRegistration(
