@@ -23,7 +23,9 @@ it's free and takes about ten minutes. See below.
 - JWT-based registration and login, gating every endpoint except `/health`
 - Users and friends CRUD with unique contact validation
 - Groups CRUD, with a single partial-update endpoint for rename and membership
-  changes (membership replacement is a full `memberIds` array, not a delta)
+  changes (membership replacement is a full `memberIds` array, not a delta).
+  Deleting a group or removing/leaving a member is blocked while any balance in
+  the group is unsettled
 - Expenses CRUD, with server-side recomputation and validation of submitted splits
   against `amount` + `splitType` before persisting
 - Payments: create and list-by-group only (immutable once recorded, no
