@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApiGroupScopedErrors } from '../common/decorators/api-common-errors.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiBearerAuth('access-token')
@@ -56,5 +57,31 @@ export class PaymentsController {
     @ApiGroupScopedErrors()
     findAllByGroup(@Param('groupId') groupId: string): Promise<PaymentResponseDto[]> {
         return this.paymentsService.findAllByGroup(groupId);
+    }
+
+    @Patch(':id')
+    @ApiOperation({
+        summary: 'Replace a payment',
+        description:
+            'Full replacement, not a partial patch -- resend payer, recipient, and amount.',
+    })
+    @ApiResponse({ status: 200, description: 'Updated payment.', type: PaymentResponseDto })
+    @ApiResponse({
+        status: 400,
+        description: 'Validation error, identical payer and recipient, or an unknown user.',
+        type: ErrorResponseDto,
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'No group with that id, or no payment with that id in this group.',
+        type: ErrorResponseDto,
+    })
+    @ApiGroupScopedErrors()
+    update(
+        @Param('groupId') groupId: string,
+        @Param('id') id: string,
+        @Body() dto: UpdatePaymentDto,
+    ): Promise<PaymentResponseDto> {
+        return this.paymentsService.update(groupId, id, dto);
     }
 }

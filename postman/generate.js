@@ -1182,6 +1182,7 @@ const expensesFolder = {
 // Payments
 // =====================================================================
 const newPaymentBody = { fromUserId: USERS.abhay.id, toUserId: USERS.divanshu.id, amount: 500 };
+const updatedPaymentBody = { fromUserId: USERS.divanshu.id, toUserId: USERS.abhay.id, amount: 750 };
 const paymentResponse = (overrides = {}) => ({
     id: '{{paymentId}}',
     groupId: GROUP_ID,
@@ -1195,7 +1196,7 @@ const paymentResponse = (overrides = {}) => ({
 const paymentsFolder = {
     name: 'Payments',
     description:
-        'A direct transfer between two group members that settles part of a debt. Immutable once created -- create and list-by-group only, no get-by-id/update/delete.',
+        'A direct transfer between two group members that settles part of a debt. Payments can be listed, created, and fully replaced; deletion is not yet supported.',
     item: [
         item(
             'Create payment',
@@ -1280,6 +1281,66 @@ const paymentsFolder = {
             unauthorizedExample('/groups/{{groupId}}/payments', 'GET'),
             forbiddenExample('/groups/{{groupId}}/payments', 'GET'),
         ]),
+        item(
+            'Update payment',
+            req('PATCH', '/groups/{{groupId}}/payments/{{paymentId}}', {
+                body: updatedPaymentBody,
+            }),
+            [
+                example(
+                    '200 OK',
+                    req('PATCH', '/groups/{{groupId}}/payments/{{paymentId}}', {
+                        body: updatedPaymentBody,
+                    }),
+                    'OK',
+                    200,
+                    paymentResponse(updatedPaymentBody),
+                ),
+                example(
+                    '400 Bad Request - fromUserId equals toUserId',
+                    req('PATCH', '/groups/{{groupId}}/payments/{{paymentId}}', {
+                        body: {
+                            fromUserId: USERS.abhay.id,
+                            toUserId: USERS.abhay.id,
+                            amount: 750,
+                        },
+                    }),
+                    'Bad Request',
+                    400,
+                    {
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: 'fromUserId and toUserId must be different',
+                        },
+                    },
+                ),
+                example(
+                    '404 Not Found - payment does not exist in group',
+                    req('PATCH', '/groups/{{groupId}}/payments/does-not-exist', {
+                        body: updatedPaymentBody,
+                    }),
+                    'Not Found',
+                    404,
+                    {
+                        error: {
+                            code: 'NOT_FOUND',
+                            message: `Payment does-not-exist not found in group ${GROUP_ID}`,
+                        },
+                    },
+                ),
+                unauthorizedExample(
+                    '/groups/{{groupId}}/payments/{{paymentId}}',
+                    'PATCH',
+                    updatedPaymentBody,
+                ),
+                forbiddenExample(
+                    '/groups/{{groupId}}/payments/{{paymentId}}',
+                    'PATCH',
+                    updatedPaymentBody,
+                ),
+            ],
+            'Full replacement, not a partial patch -- resend payer, recipient, and amount.',
+        ),
     ],
 };
 
