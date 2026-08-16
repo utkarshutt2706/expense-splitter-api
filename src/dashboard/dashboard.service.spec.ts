@@ -49,8 +49,25 @@ describe('DashboardService', () => {
                 { userId: 'friend', name: 'Asha', amount: 120, isCurrentUser: false },
             ],
             groupSpend: [
-                { groupId: 'trip', name: 'Trip', amount: 200.25 },
-                { groupId: 'home', name: 'Home', amount: 40 },
+                {
+                    groupId: 'trip',
+                    name: 'Trip',
+                    amount: 200.25,
+                    actualPaid: 120,
+                    currentUserShare: 80.25,
+                    memberShares: [
+                        { userId: 'friend', name: 'Asha', amount: 120, isCurrentUser: false },
+                        { userId: 'me', name: 'Me', amount: 80.25, isCurrentUser: true },
+                    ],
+                },
+                {
+                    groupId: 'home',
+                    name: 'Home',
+                    amount: 40,
+                    actualPaid: 40,
+                    currentUserShare: 40,
+                    memberShares: [{ userId: 'me', name: 'Me', amount: 40, isCurrentUser: true }],
+                },
             ],
         });
         expect(findMany).toHaveBeenCalledWith(
