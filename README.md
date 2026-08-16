@@ -72,8 +72,19 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 Database schema migrations run automatically as part of the app's start command
 (`pnpm prisma:migrate:deploy`, ahead of every boot) — nothing extra to configure.
 Render's free tier spins the service down after inactivity, so the first request
-after a quiet period can take 30–50 seconds to wake it back up; the `/health`
-endpoint is there for uptime pingers if you want to keep it warm.
+after a quiet period can take 30–50 seconds to wake it back up. The public `/health`
+endpoint verifies database connectivity as well as HTTP availability, returning
+`503 Service Unavailable` if PostgreSQL cannot be queried.
+
+The scheduled health probe requires the following repository Actions configuration:
+
+- Variables: `RENDER_SERVICE_URL` (the public Render URL) and `HEALTH_ALERT_EMAIL`
+- Secrets: `GMAIL_USER` and `GMAIL_APP_PASSWORD`
+
+The probe keeps the service warm during expected usage hours. If the endpoint is
+unreachable or unhealthy after retries, its GitHub-hosted runner sends the status and
+response to `HEALTH_ALERT_EMAIL` through Gmail SMTP. Alert delivery intentionally
+runs outside the backend so it still works when the service itself is unavailable.
 
 ## Local development
 

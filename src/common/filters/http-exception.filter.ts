@@ -14,6 +14,7 @@ const STATUS_TO_CODE: Partial<Record<number, string>> = {
     [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
     [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
     [HttpStatus.CONFLICT]: 'CONFLICT',
+    [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
 };
 
 @Catch()
