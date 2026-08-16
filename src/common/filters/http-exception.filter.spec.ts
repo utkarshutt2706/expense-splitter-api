@@ -6,6 +6,7 @@ import {
     HttpException,
     HttpStatus,
     NotFoundException,
+    ServiceUnavailableException,
     UnauthorizedException,
 } from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
@@ -60,6 +61,23 @@ describe('HttpExceptionFilter', () => {
 
         expect(res.json).toHaveBeenCalledWith({
             error: { code: 'CONFLICT', message: 'Already exists' },
+        });
+    });
+
+    it('maps ServiceUnavailableException to a SERVICE_UNAVAILABLE error', () => {
+        const res = mockResponse();
+
+        filter.catch(
+            new ServiceUnavailableException('database health check failed'),
+            mockHost(res),
+        );
+
+        expect(res.status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+        expect(res.json).toHaveBeenCalledWith({
+            error: {
+                code: 'SERVICE_UNAVAILABLE',
+                message: 'Database health check failed',
+            },
         });
     });
 
