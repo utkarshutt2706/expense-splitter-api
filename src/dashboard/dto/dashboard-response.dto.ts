@@ -23,6 +23,15 @@ export class DashboardGroupSpendDto {
 
     @ApiProperty({ example: 4800 })
     amount: number;
+
+    @ApiProperty({ example: 3200 })
+    actualPaid: number;
+
+    @ApiProperty({ example: 1600 })
+    currentUserShare: number;
+
+    @ApiProperty({ type: [DashboardMemberShareDto] })
+    memberShares: DashboardMemberShareDto[];
 }
 
 export class DashboardResponseDto {
