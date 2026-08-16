@@ -31,6 +31,7 @@ jobs:
       - run: >-
           pnpm test --runInBand --coverage
           --coverageReporters=lcov
+          --coverageReporters=json
           --coverageReporters=json-summary
           --coverageReporters=text
       - name: Comment coverage summary
@@ -46,6 +47,9 @@ jobs:
             const path = require('path');
             const coverageReport = JSON.parse(
               fs.readFileSync('coverage/coverage-summary.json', 'utf8'),
+            );
+            const finalCoverageReport = JSON.parse(
+              fs.readFileSync('coverage/coverage-final.json', 'utf8'),
             );
             const summary = coverageReport.total;
             const marker = '<!-- backend-coverage-report -->';
@@ -74,12 +78,6 @@ jobs:
               pull_number: context.issue.number,
               per_page: 100,
             });
-            const changedSourceFiles = pullRequestFiles
-              .filter(({ filename, status }) =>
-                status !== 'removed' && filename.startsWith('src/') && filename.endsWith('.ts'),
-              )
-              .map(({ filename }) => filename)
-              .sort();
             const coverageByFile = new Map(
               Object.entries(coverageReport)
                 .filter(([filename]) => filename !== 'total')
@@ -88,26 +86,62 @@ jobs:
                   coverage,
                 ]),
             );
+            const finalCoverageByFile = new Map(
+              Object.entries(finalCoverageReport).map(([filename, coverage]) => [
+                path.relative(process.cwd(), filename).split(path.sep).join('/'),
+                coverage,
+              ]),
+            );
+            // Only report production files measured by Jest. This intentionally
+            // excludes changed specs and files excluded by the coverage config.
+            const changedCoveredFiles = pullRequestFiles
+              .filter(({ filename, status }) =>
+                status !== 'removed' && coverageByFile.has(filename),
+              )
+              .map(({ filename }) => filename)
+              .sort();
             const escapeHtml = (value) => value
               .replaceAll('&', '&amp;')
               .replaceAll('<', '&lt;')
               .replaceAll('>', '&gt;')
               .replaceAll('"', '&quot;')
               .replaceAll("'", '&#39;');
-            const fileCoverageRows = changedSourceFiles.map((filename) => {
+            const compactLineRanges = (lines) => {
+              const ranges = [];
+              for (const line of lines) {
+                const previous = ranges.at(-1);
+                if (previous && line === previous.end + 1) previous.end = line;
+                else ranges.push({ start: line, end: line });
+              }
+              return ranges;
+            };
+            const uncoveredLineLinks = (filename) => {
+              const details = finalCoverageByFile.get(filename);
+              if (!details) return '—';
+              const lines = [...new Set(
+                Object.entries(details.s)
+                  .filter(([, count]) => count === 0)
+                  .map(([id]) => details.statementMap[id].start.line),
+              )].sort((left, right) => left - right);
+              if (lines.length === 0) return '—';
+              const encodedFilename = filename.split('/').map(encodeURIComponent).join('/');
+              return compactLineRanges(lines).map(({ start, end }) => {
+                const label = start === end ? `${start}` : `${start}-${end}`;
+                const anchor = start === end ? `#L${start}` : `#L${start}-L${end}`;
+                return `<a href="${repositoryUrl}/blob/${commitSha}/${encodedFilename}${anchor}">${label}</a>`;
+              }).join(', ');
+            };
+            const fileCoverageRows = changedCoveredFiles.map((filename) => {
               const coverage = coverageByFile.get(filename);
-              const cell = (key) => {
-                if (!coverage) return '<td align="center">🔴 Not covered</td>';
-                const status = coverage[key].pct >= thresholds[key] ? '🟢' : '🔴';
-                return `<td align="right">${status} ${coverage[key].pct}%</td>`;
-              };
-              return `<tr> <td align="left"><code>${escapeHtml(filename)}</code></td> ${cell('lines')} ${cell('statements')} ${cell('functions')} ${cell('branches')} </tr>`;
+              const encodedFilename = filename.split('/').map(encodeURIComponent).join('/');
+              const fileLink = `<a href="${repositoryUrl}/blob/${commitSha}/${encodedFilename}"><code>${escapeHtml(filename)}</code></a>`;
+              return `<tr> <td align="left">${fileLink}</td> <td align="right">${coverage.statements.pct}%</td> <td align="right">${coverage.branches.pct}%</td> <td align="right">${coverage.functions.pct}%</td> <td align="right">${coverage.lines.pct}%</td> <td align="left">${uncoveredLineLinks(filename)}</td> </tr>`;
             });
-            const fileCoverage = changedSourceFiles.length === 0
-              ? '<details><summary>File Coverage</summary>No changed source files found.</details>'
+            const fileCoverage = changedCoveredFiles.length === 0
+              ? '<details><summary>File Coverage</summary>No changed coverable source files found.</details>'
               : [
                   '<details><summary>File Coverage</summary>',
-                  '<table> <thead> <tr> <th align="left">File</th> <th align="right">Lines</th> <th align="right">Statements</th> <th align="right">Functions</th> <th align="right">Branches</th> </tr> </thead> <tbody>',
+                  '<table> <thead> <tr> <th align="left">File</th> <th align="right">Statements</th> <th align="right">Branches</th> <th align="right">Functions</th> <th align="right">Lines</th> <th align="left">Uncovered Lines</th> </tr> </thead> <tbody>',
                   ...fileCoverageRows,
                   '</tbody> </table></details>',
                 ].join('\n');
