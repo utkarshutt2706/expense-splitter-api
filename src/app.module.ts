@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { BalancesModule } from './balances/balances.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { HealthController } from './health/health.controller';
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
         ExpensesModule,
         PaymentsModule,
         BalancesModule,
+        DashboardModule,
         InvitationsModule,
     ],
     controllers: [HealthController],
