@@ -17,7 +17,9 @@ import {
     ApiUnauthorizedError,
 } from '../common/decorators/api-common-errors.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
+import { JwtPayload } from '../common/jwt-payload';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -109,8 +111,9 @@ export class ExpensesController {
     create(
         @Param('groupId') groupId: string,
         @Body() dto: CreateExpenseDto,
+        @CurrentUser() user: JwtPayload,
     ): Promise<ExpenseResponseDto> {
-        return this.expensesService.create(groupId, dto);
+        return this.expensesService.create(groupId, dto, user.sub);
     }
 
     @Get()

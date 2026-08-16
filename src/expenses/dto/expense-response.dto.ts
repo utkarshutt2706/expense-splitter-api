@@ -11,6 +11,7 @@ export class ExpenseResponseDto {
     description: string;
     amount: number;
     paidByUserId: string;
+    createdByUserId: string;
     splitType: SplitType;
     splits: ExpenseSplitResponseDto[];
     createdAt: string;
