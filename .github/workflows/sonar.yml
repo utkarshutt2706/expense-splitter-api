@@ -43,9 +43,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const summary = JSON.parse(
+            const path = require('path');
+            const coverageReport = JSON.parse(
               fs.readFileSync('coverage/coverage-summary.json', 'utf8'),
-            ).total;
+            );
+            const summary = coverageReport.total;
             const marker = '<!-- backend-coverage-report -->';
             const labels = {
               lines: 'Lines',
@@ -66,11 +68,54 @@ jobs:
             });
             const repositoryUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}`;
             const commitSha = context.payload.pull_request.head.sha;
+            const pullRequestFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const changedSourceFiles = pullRequestFiles
+              .filter(({ filename, status }) =>
+                status !== 'removed' && filename.startsWith('src/') && filename.endsWith('.ts'),
+              )
+              .map(({ filename }) => filename)
+              .sort();
+            const coverageByFile = new Map(
+              Object.entries(coverageReport)
+                .filter(([filename]) => filename !== 'total')
+                .map(([filename, coverage]) => [
+                  path.relative(process.cwd(), filename).split(path.sep).join('/'),
+                  coverage,
+                ]),
+            );
+            const escapeHtml = (value) => value
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+              .replaceAll("'", '&#39;');
+            const fileCoverageRows = changedSourceFiles.map((filename) => {
+              const coverage = coverageByFile.get(filename);
+              const cell = (key) => {
+                if (!coverage) return '<td align="center">🔴 Not covered</td>';
+                const status = coverage[key].pct >= thresholds[key] ? '🟢' : '🔴';
+                return `<td align="right">${status} ${coverage[key].pct}%</td>`;
+              };
+              return `<tr> <td align="left"><code>${escapeHtml(filename)}</code></td> ${cell('lines')} ${cell('statements')} ${cell('functions')} ${cell('branches')} </tr>`;
+            });
+            const fileCoverage = changedSourceFiles.length === 0
+              ? '<details><summary>File Coverage</summary>No changed source files found.</details>'
+              : [
+                  '<details><summary>File Coverage</summary>',
+                  '<table> <thead> <tr> <th align="left">File</th> <th align="right">Lines</th> <th align="right">Statements</th> <th align="right">Functions</th> <th align="right">Branches</th> </tr> </thead> <tbody>',
+                  ...fileCoverageRows,
+                  '</tbody> </table></details>',
+                ].join('\n');
             const body = [
               '<h2>Coverage Report</h2>',
               '<table> <thead> <tr> <th align="center">Status</th> <th align="left">Category</th> <th align="right">Percentage</th> <th align="right">Covered / Total</th> </tr> </thead> <tbody>',
               ...rows,
-              '</tbody> </table><details><summary>File Coverage</summary>No changed files found.</details>',
+              `</tbody> </table>${fileCoverage}`,
               `<em>Generated in workflow <a href="${repositoryUrl}/actions/runs/${context.runId}">#${context.runNumber}</a> for commit <a href="${repositoryUrl}/commit/${commitSha}">${commitSha.slice(0, 7)}</a> by the <a href="https://jestjs.io/docs/configuration#coveragereporters-arraystring--string-options">Jest Coverage Reporter</a></em>`,
               '',
               marker,
