@@ -6,6 +6,7 @@ type MockedPaymentsService = {
     create: jest.Mock;
     findAllByGroup: jest.Mock;
     update: jest.Mock;
+    remove: jest.Mock;
 };
 
 describe('PaymentsController', () => {
@@ -26,6 +27,7 @@ describe('PaymentsController', () => {
             create: jest.fn(),
             findAllByGroup: jest.fn(),
             update: jest.fn(),
+            remove: jest.fn(),
         };
         controller = new PaymentsController(paymentsService as unknown as PaymentsService);
     });
@@ -52,5 +54,12 @@ describe('PaymentsController', () => {
 
         await expect(controller.update('group-1', 'payment-1', dto)).resolves.toEqual(updated);
         expect(paymentsService.update).toHaveBeenCalledWith('group-1', 'payment-1', dto);
+    });
+
+    it('delegates remove to the service', async () => {
+        paymentsService.remove.mockResolvedValue(undefined);
+
+        await expect(controller.remove('group-1', 'payment-1')).resolves.toBeUndefined();
+        expect(paymentsService.remove).toHaveBeenCalledWith('group-1', 'payment-1');
     });
 });

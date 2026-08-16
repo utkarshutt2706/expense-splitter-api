@@ -23,6 +23,7 @@ describe('PaymentsService', () => {
             findMany: jest.Mock;
             findFirst: jest.Mock;
             update: jest.Mock;
+            delete: jest.Mock;
         };
     };
 
@@ -46,6 +47,7 @@ describe('PaymentsService', () => {
                 findMany: jest.fn(),
                 findFirst: jest.fn(),
                 update: jest.fn(),
+                delete: jest.fn(),
             },
         };
         service = new PaymentsService(prisma as unknown as PrismaService);
@@ -196,6 +198,41 @@ describe('PaymentsService', () => {
             await expect(service.update('group-1', 'payment-1', dto)).rejects.toThrow(
                 NotFoundException,
             );
+        });
+    });
+
+    describe('remove', () => {
+        beforeEach(() => {
+            prisma.payment.findFirst.mockResolvedValue(payment);
+            prisma.payment.delete.mockResolvedValue(payment);
+        });
+
+        it('throws NotFoundException when the payment is outside the group', async () => {
+            prisma.payment.findFirst.mockResolvedValue(null);
+
+            await expect(service.remove('group-1', 'payment-1')).rejects.toThrow(NotFoundException);
+            expect(prisma.payment.delete).not.toHaveBeenCalled();
+        });
+
+        it('deletes the payment after verifying its group scope', async () => {
+            await expect(service.remove('group-1', 'payment-1')).resolves.toBeUndefined();
+
+            expect(prisma.payment.findFirst).toHaveBeenCalledWith({
+                where: { id: 'payment-1', groupId: 'group-1' },
+            });
+            expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-1' } });
+        });
+
+        it('maps a concurrent deletion to NotFoundException', async () => {
+            prisma.payment.delete.mockRejectedValue(knownRequestError('P2025'));
+
+            await expect(service.remove('group-1', 'payment-1')).rejects.toThrow(NotFoundException);
+        });
+
+        it('rethrows unrecognized errors unchanged', async () => {
+            prisma.payment.delete.mockRejectedValue(new Error('boom'));
+
+            await expect(service.remove('group-1', 'payment-1')).rejects.toThrow('boom');
         });
     });
 });

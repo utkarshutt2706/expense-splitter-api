@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Patch,
+    Post,
+    UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApiGroupScopedErrors } from '../common/decorators/api-common-errors.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
@@ -17,7 +28,6 @@ export class PaymentsController {
     @Post()
     @ApiOperation({
         summary: 'Record a payment settling debt within a group',
-        description: 'Immutable once created -- no update/delete/get-by-id.',
     })
     @ApiResponse({ status: 201, description: 'Payment recorded.', type: PaymentResponseDto })
     @ApiResponse({
@@ -83,5 +93,19 @@ export class PaymentsController {
         @Body() dto: UpdatePaymentDto,
     ): Promise<PaymentResponseDto> {
         return this.paymentsService.update(groupId, id, dto);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete a payment' })
+    @ApiResponse({ status: 204, description: 'Deleted.' })
+    @ApiResponse({
+        status: 404,
+        description: 'No group with that id, or no payment with that id in this group.',
+        type: ErrorResponseDto,
+    })
+    @ApiGroupScopedErrors()
+    async remove(@Param('groupId') groupId: string, @Param('id') id: string): Promise<void> {
+        await this.paymentsService.remove(groupId, id);
     }
 }

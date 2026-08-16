@@ -4738,7 +4738,7 @@
         },
         {
             "name": "Payments",
-            "description": "A direct transfer between two group members that settles part of a debt. Payments can be listed, created, and fully replaced; deletion is not yet supported.",
+            "description": "A direct transfer between two group members that settles part of a debt. Payments can be listed, created, fully replaced, and deleted.",
             "item": [
                 {
                     "name": "Create payment",
@@ -5506,6 +5506,182 @@
                                             "language": "json"
                                         }
                                     }
+                                }
+                            },
+                            "status": "Forbidden",
+                            "code": 403,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Delete payment",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "groups",
+                                "{{groupId}}",
+                                "payments",
+                                "{{paymentId}}"
+                            ]
+                        }
+                    },
+                    "response": [
+                        {
+                            "name": "204 No Content",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                }
+                            },
+                            "status": "No Content",
+                            "code": 204,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": ""
+                        },
+                        {
+                            "name": "404 Not Found - payment does not exist in group",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/does-not-exist",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "does-not-exist"
+                                    ]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Payment does-not-exist not found in group group-daaru-party\"\n    }\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized - missing/invalid token",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "not-a-real-token",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            },
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
+                        },
+                        {
+                            "name": "403 Forbidden - not a member of this group",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
                                 }
                             },
                             "status": "Forbidden",

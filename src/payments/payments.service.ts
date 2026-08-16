@@ -58,6 +58,16 @@ export class PaymentsService {
         }
     }
 
+    async remove(groupId: string, id: string): Promise<void> {
+        await this.ensurePaymentExists(groupId, id);
+
+        try {
+            await this.prisma.payment.delete({ where: { id } });
+        } catch (error) {
+            throw this.mapPrismaError(error, groupId, id);
+        }
+    }
+
     private async ensureGroupExists(groupId: string): Promise<void> {
         const group = await this.prisma.group.findUnique({ where: { id: groupId } });
         if (!group) {

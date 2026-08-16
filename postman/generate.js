@@ -1196,7 +1196,7 @@ const paymentResponse = (overrides = {}) => ({
 const paymentsFolder = {
     name: 'Payments',
     description:
-        'A direct transfer between two group members that settles part of a debt. Payments can be listed, created, and fully replaced; deletion is not yet supported.',
+        'A direct transfer between two group members that settles part of a debt. Payments can be listed, created, fully replaced, and deleted.',
     item: [
         item(
             'Create payment',
@@ -1341,6 +1341,28 @@ const paymentsFolder = {
             ],
             'Full replacement, not a partial patch -- resend payer, recipient, and amount.',
         ),
+        item('Delete payment', req('DELETE', '/groups/{{groupId}}/payments/{{paymentId}}'), [
+            example(
+                '204 No Content',
+                req('DELETE', '/groups/{{groupId}}/payments/{{paymentId}}'),
+                'No Content',
+                204,
+            ),
+            example(
+                '404 Not Found - payment does not exist in group',
+                req('DELETE', '/groups/{{groupId}}/payments/does-not-exist'),
+                'Not Found',
+                404,
+                {
+                    error: {
+                        code: 'NOT_FOUND',
+                        message: `Payment does-not-exist not found in group ${GROUP_ID}`,
+                    },
+                },
+            ),
+            unauthorizedExample('/groups/{{groupId}}/payments/{{paymentId}}', 'DELETE'),
+            forbiddenExample('/groups/{{groupId}}/payments/{{paymentId}}', 'DELETE'),
+        ]),
     ],
 };
 
