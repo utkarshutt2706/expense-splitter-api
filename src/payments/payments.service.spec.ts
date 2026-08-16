@@ -18,7 +18,12 @@ describe('PaymentsService', () => {
     let service: PaymentsService;
     let prisma: {
         group: { findUnique: jest.Mock };
-        payment: { create: jest.Mock; findMany: jest.Mock };
+        payment: {
+            create: jest.Mock;
+            findMany: jest.Mock;
+            findFirst: jest.Mock;
+            update: jest.Mock;
+        };
     };
 
     const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
@@ -36,7 +41,12 @@ describe('PaymentsService', () => {
     beforeEach(() => {
         prisma = {
             group: { findUnique: jest.fn() },
-            payment: { create: jest.fn(), findMany: jest.fn() },
+            payment: {
+                create: jest.fn(),
+                findMany: jest.fn(),
+                findFirst: jest.fn(),
+                update: jest.fn(),
+            },
         };
         service = new PaymentsService(prisma as unknown as PrismaService);
         prisma.group.findUnique.mockResolvedValue(group);
@@ -118,6 +128,74 @@ describe('PaymentsService', () => {
                     createdAt: createdAt.toISOString(),
                 },
             ]);
+        });
+    });
+
+    describe('update', () => {
+        const dto = { fromUserId: 'user-2', toUserId: 'user-1', amount: 750 };
+
+        beforeEach(() => {
+            prisma.payment.findFirst.mockResolvedValue(payment);
+        });
+
+        it('throws NotFoundException when the payment is outside the group', async () => {
+            prisma.payment.findFirst.mockResolvedValue(null);
+
+            await expect(service.update('group-1', 'payment-1', dto)).rejects.toThrow(
+                NotFoundException,
+            );
+            expect(prisma.payment.findFirst).toHaveBeenCalledWith({
+                where: { id: 'payment-1', groupId: 'group-1' },
+            });
+            expect(prisma.payment.update).not.toHaveBeenCalled();
+        });
+
+        it('throws BadRequestException when payer and recipient are identical', async () => {
+            const invalid = { ...dto, toUserId: dto.fromUserId };
+
+            await expect(service.update('group-1', 'payment-1', invalid)).rejects.toThrow(
+                BadRequestException,
+            );
+            expect(prisma.payment.update).not.toHaveBeenCalled();
+        });
+
+        it('replaces the payment and maps it to the response shape', async () => {
+            const updated = {
+                ...payment,
+                fromUserId: dto.fromUserId,
+                toUserId: dto.toUserId,
+                amount: dec(dto.amount),
+            };
+            prisma.payment.update.mockResolvedValue(updated);
+
+            await expect(service.update('group-1', 'payment-1', dto)).resolves.toEqual({
+                id: 'payment-1',
+                groupId: 'group-1',
+                fromUserId: 'user-2',
+                toUserId: 'user-1',
+                amount: 750,
+                createdAt: createdAt.toISOString(),
+            });
+            expect(prisma.payment.update).toHaveBeenCalledWith({
+                where: { id: 'payment-1' },
+                data: dto,
+            });
+        });
+
+        it('maps a foreign key violation to BadRequestException', async () => {
+            prisma.payment.update.mockRejectedValue(knownRequestError('P2003'));
+
+            await expect(service.update('group-1', 'payment-1', dto)).rejects.toThrow(
+                BadRequestException,
+            );
+        });
+
+        it('maps a concurrent deletion to NotFoundException', async () => {
+            prisma.payment.update.mockRejectedValue(knownRequestError('P2025'));
+
+            await expect(service.update('group-1', 'payment-1', dto)).rejects.toThrow(
+                NotFoundException,
+            );
         });
     });
 });

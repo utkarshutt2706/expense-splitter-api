@@ -4738,7 +4738,7 @@
         },
         {
             "name": "Payments",
-            "description": "A direct transfer between two group members that settles part of a debt. Immutable once created -- create and list-by-group only, no get-by-id/update/delete.",
+            "description": "A direct transfer between two group members that settles part of a debt. Payments can be listed, created, and fully replaced; deletion is not yet supported.",
             "item": [
                 {
                     "name": "Create payment",
@@ -5240,6 +5240,272 @@
                                         "{{groupId}}",
                                         "payments"
                                     ]
+                                }
+                            },
+                            "status": "Forbidden",
+                            "code": 403,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update payment",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "groups",
+                                "{{groupId}}",
+                                "payments",
+                                "{{paymentId}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Full replacement, not a partial patch -- resend payer, recipient, and amount."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"id\": \"{{paymentId}}\",\n    \"groupId\": \"group-daaru-party\",\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750,\n    \"createdAt\": \"2026-08-03T04:00:55.004Z\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request - fromUserId equals toUserId",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"fromUserId\": \"friend-abhay\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Bad Request",
+                            "code": 400,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"fromUserId and toUserId must be different\"\n    }\n}"
+                        },
+                        {
+                            "name": "404 Not Found - payment does not exist in group",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/does-not-exist",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "does-not-exist"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Payment does-not-exist not found in group group-daaru-party\"\n    }\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized - missing/invalid token",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "not-a-real-token",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            },
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
+                        },
+                        {
+                            "name": "403 Forbidden - not a member of this group",
+                            "originalRequest": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "groups",
+                                        "{{groupId}}",
+                                        "payments",
+                                        "{{paymentId}}"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"fromUserId\": \"friend-divanshu\",\n    \"toUserId\": \"friend-abhay\",\n    \"amount\": 750\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
                                 }
                             },
                             "status": "Forbidden",
