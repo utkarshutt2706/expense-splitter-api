@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -27,7 +28,67 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm exec prisma generate
-      - run: pnpm test --runInBand --coverage
+      - run: >-
+          pnpm test --runInBand --coverage
+          --coverageReporters=lcov
+          --coverageReporters=json-summary
+          --coverageReporters=text
+      - name: Comment coverage summary
+        if: >-
+          success() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]'
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = JSON.parse(
+              fs.readFileSync('coverage/coverage-summary.json', 'utf8'),
+            ).total;
+            const marker = '<!-- backend-coverage-report -->';
+            const labels = {
+              lines: 'Lines',
+              statements: 'Statements',
+              functions: 'Functions',
+              branches: 'Branches',
+            };
+            const rows = Object.entries(labels).map(([key, label]) =>
+              `| ${label} | ${summary[key].pct}% | ${summary[key].covered} / ${summary[key].total} |`,
+            );
+            const body = [
+              marker,
+              '### 🧪 Backend test coverage',
+              '',
+              '| Metric | Coverage | Covered / Total |',
+              '| --- | ---: | ---: |',
+              ...rows,
+              '',
+              `[View the Sonar workflow run](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`,
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
       - uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         # Fork PRs do not receive SONAR_TOKEN. Tests still run above; only the scan is skipped.
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
