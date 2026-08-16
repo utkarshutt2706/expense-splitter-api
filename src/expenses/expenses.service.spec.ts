@@ -56,6 +56,7 @@ describe('ExpensesService', () => {
             description: dto.description,
             amount: dec(dto.amount),
             paidByUserId: dto.paidByUserId,
+            createdByUserId: dto.paidByUserId,
             splitType: dto.splitType,
             createdAt: new Date('2026-07-23T10:00:00.000Z'),
             splits: dto.splits.map((split) => ({

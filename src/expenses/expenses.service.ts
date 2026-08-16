@@ -22,7 +22,11 @@ const PERCENTAGE_SUM_TOLERANCE = 0.01;
 export class ExpensesService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(groupId: string, dto: CreateExpenseDto): Promise<ExpenseResponseDto> {
+    async create(
+        groupId: string,
+        dto: CreateExpenseDto,
+        createdByUserId = dto.paidByUserId,
+    ): Promise<ExpenseResponseDto> {
         await this.ensureGroupExists(groupId);
 
         const submitted: Split[] = dto.splits;
@@ -35,6 +39,7 @@ export class ExpensesService {
                     description: dto.description,
                     amount: dto.amount,
                     paidByUserId: dto.paidByUserId,
+                    createdByUserId,
                     splitType: dto.splitType,
                     splits: {
                         create: submitted.map((split) => ({
@@ -174,6 +179,7 @@ export class ExpensesService {
             description: expense.description,
             amount: expense.amount.toNumber(),
             paidByUserId: expense.paidByUserId,
+            createdByUserId: expense.createdByUserId,
             splitType: expense.splitType,
             splits: expense.splits.map((split) => ({
                 userId: split.userId,

@@ -16,6 +16,7 @@ model User {
 
   groupMemberships    GroupMember[]
   expensesPaid        Expense[]         @relation("ExpensePaidBy")
+  expensesCreated     Expense[]         @relation("ExpenseCreatedBy")
   expenseSplits       ExpenseSplit[]
   paymentsSent        Payment[]         @relation("PaymentFrom")
   paymentsReceived    Payment[]         @relation("PaymentTo")
@@ -90,11 +91,13 @@ model Expense {
   description  String
   amount       Decimal   @db.Decimal(12, 2)
   paidByUserId String
+  createdByUserId String
   splitType    SplitType
   createdAt    DateTime  @default(now())
 
   group  Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   paidBy User           @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
+  createdBy User        @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
   splits ExpenseSplit[]
 
   @@map("expenses")

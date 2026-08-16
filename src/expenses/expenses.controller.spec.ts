@@ -21,6 +21,7 @@ describe('ExpensesController', () => {
         description: 'Daaru',
         amount: 5200,
         paidByUserId: 'friend-divanshu',
+        createdByUserId: 'user-1',
         splitType: SplitType.equal,
         splits: [{ userId: 'user-1', amount: 1040 }],
         createdAt: '2026-07-23T10:00:00.000Z',
@@ -47,8 +48,10 @@ describe('ExpensesController', () => {
             splitType: SplitType.equal,
             splits: [{ userId: 'user-1', amount: 1040 }],
         };
-        await expect(controller.create('group-1', dto)).resolves.toEqual(expense);
-        expect(expensesService.create).toHaveBeenCalledWith('group-1', dto);
+        await expect(
+            controller.create('group-1', dto, { sub: 'user-1', email: null }),
+        ).resolves.toEqual(expense);
+        expect(expensesService.create).toHaveBeenCalledWith('group-1', dto, 'user-1');
     });
 
     it('delegates findAllByGroup to the service', async () => {
