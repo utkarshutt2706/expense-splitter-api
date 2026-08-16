@@ -2,21 +2,55 @@ name: Deploy to Render
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [Sonar]
     types: [completed]
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  actions: read
+
+concurrency:
+  group: render-production
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_branch == 'main')
     steps:
+      - name: Verify CI succeeded for this commit
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        with:
+          script: |
+            const headSha = context.payload.workflow_run.head_sha;
+            const deadline = Date.now() + 5 * 60 * 1000;
+
+            while (Date.now() < deadline) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head_sha: headSha,
+                event: 'push',
+                per_page: 100,
+              });
+              const ciRun = data.workflow_runs.find((run) => run.name === 'CI');
+
+              if (ciRun?.conclusion === 'success') return;
+              if (ciRun?.status === 'completed') {
+                core.setFailed(`CI concluded with ${ciRun.conclusion}.`);
+                return;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 10_000));
+            }
+
+            core.setFailed('Timed out waiting for CI to complete.');
       - name: Verify deploy hook secret is configured
         run: |
           if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
@@ -25,4 +59,4 @@ jobs:
           fi
       - name: Trigger Render deploy hook
         run: |
-          curl --fail --silent --show-error -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

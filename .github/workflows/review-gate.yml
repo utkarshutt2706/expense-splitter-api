@@ -13,19 +13,23 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      REQUIRED_REVIEWER: ${{ vars.REQUIRED_REVIEWER || github.repository_owner }}
     steps:
-      - uses: actions/github-script@v9
+      - uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         with:
           script: |
-            const owner = 'utkarshutt2706';
+            const owner = process.env.REQUIRED_REVIEWER;
             const checkName = 'review-required';
             const pr = context.payload.pull_request.number;
             const headSha = context.payload.pull_request.head.sha;
 
-            const { data: commits } = await github.rest.pulls.listCommits({
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr,
+              per_page: 100,
             });
             const allMine = commits.every((c) => c.author && c.author.login === owner);
 
@@ -36,23 +40,32 @@ jobs:
               conclusion = 'success';
               summary = `All commits authored by ${owner}, no review required.`;
             } else {
-              const { data: reviews } = await github.rest.pulls.listReviews({
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pr,
+                per_page: 100,
               });
-              const latestOwnerReview = reviews.filter((r) => r.user.login === owner).pop();
-              if (latestOwnerReview && latestOwnerReview.state === 'APPROVED') {
+              const latestOwnerReview = reviews
+                .filter(
+                  (r) =>
+                    r.user.login === owner &&
+                    r.commit_id === headSha &&
+                    ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(r.state),
+                )
+                .pop();
+              if (latestOwnerReview?.state === 'APPROVED') {
                 conclusion = 'success';
                 summary = `Approved by ${owner}.`;
               }
             }
 
-            const { data: existing } = await github.rest.checks.listForRef({
+            const existing = await github.paginate(github.rest.checks.listForRef, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: headSha,
               check_name: checkName,
+              per_page: 100,
             });
 
             const payload = {
@@ -65,8 +78,8 @@ jobs:
               output: { title: checkName, summary },
             };
 
-            if (existing.check_runs.length > 0) {
-              await github.rest.checks.update({ check_run_id: existing.check_runs[0].id, ...payload });
+            if (existing.length > 0) {
+              await github.rest.checks.update({ check_run_id: existing[0].id, ...payload });
             } else {
               await github.rest.checks.create(payload);
             }
