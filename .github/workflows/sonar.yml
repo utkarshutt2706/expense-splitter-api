@@ -53,18 +53,27 @@ jobs:
               functions: 'Functions',
               branches: 'Branches',
             };
-            const rows = Object.entries(labels).map(([key, label]) =>
-              `| ${label} | ${summary[key].pct}% | ${summary[key].covered} / ${summary[key].total} |`,
-            );
+            const thresholds = {
+              lines: 80,
+              statements: 80,
+              functions: 80,
+              branches: 70,
+            };
+            const rows = Object.entries(labels).map(([key, label]) => {
+              const coverage = summary[key];
+              const status = coverage.pct >= thresholds[key] ? '🟢' : '🔴';
+              return `<tr> <td align="center">${status}</td> <td align="left">${label}</td> <td align="right">${coverage.pct}% (🎯 ${thresholds[key]}%)</td> <td align="right">${coverage.covered} / ${coverage.total}</td> </tr>`;
+            });
+            const repositoryUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}`;
+            const commitSha = context.payload.pull_request.head.sha;
             const body = [
-              marker,
-              '### 🧪 Backend test coverage',
-              '',
-              '| Metric | Coverage | Covered / Total |',
-              '| --- | ---: | ---: |',
+              '<h2>Coverage Report</h2>',
+              '<table> <thead> <tr> <th align="center">Status</th> <th align="left">Category</th> <th align="right">Percentage</th> <th align="right">Covered / Total</th> </tr> </thead> <tbody>',
               ...rows,
+              '</tbody> </table><details><summary>File Coverage</summary>No changed files found.</details>',
+              `<em>Generated in workflow <a href="${repositoryUrl}/actions/runs/${context.runId}">#${context.runNumber}</a> for commit <a href="${repositoryUrl}/commit/${commitSha}">${commitSha.slice(0, 7)}</a> by the <a href="https://jestjs.io/docs/configuration#coveragereporters-arraystring--string-options">Jest Coverage Reporter</a></em>`,
               '',
-              `[View the Sonar workflow run](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`,
+              marker,
             ].join('\n');
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
