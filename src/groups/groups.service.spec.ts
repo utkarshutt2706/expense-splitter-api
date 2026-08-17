@@ -152,6 +152,59 @@ describe('GroupsService', () => {
         });
     });
 
+    describe('findAllSummaries', () => {
+        it('returns canonical current-user balances and latest financial activity', async () => {
+            prisma.group.findMany.mockResolvedValue([
+                {
+                    ...group,
+                    expenses: [
+                        {
+                            paidByUserId: 'user-1',
+                            createdAt: new Date('2026-08-12T10:00:00.000Z'),
+                            splits: [
+                                { userId: 'user-1', amount: { toNumber: () => 50 } },
+                                { userId: 'user-2', amount: { toNumber: () => 50 } },
+                            ],
+                        },
+                    ],
+                    payments: [
+                        {
+                            fromUserId: 'user-2',
+                            toUserId: 'user-1',
+                            amount: { toNumber: () => 20 },
+                            createdAt: new Date('2026-08-15T10:00:00.000Z'),
+                        },
+                    ],
+                },
+            ]);
+
+            await expect(service.findAllSummaries('user-1')).resolves.toEqual([
+                {
+                    id: 'group-1',
+                    name: 'Daaru Party',
+                    memberIds: ['user-1', 'user-2'],
+                    memberCount: 2,
+                    currentUserBalance: 30,
+                    hasFinancialActivity: true,
+                    lastActivityAt: '2026-08-15T10:00:00.000Z',
+                    createdAt: createdAt.toISOString(),
+                },
+            ]);
+        });
+
+        it('returns an explicit no-activity summary without inventing a date', async () => {
+            prisma.group.findMany.mockResolvedValue([{ ...group, expenses: [], payments: [] }]);
+
+            await expect(service.findAllSummaries('user-1')).resolves.toEqual([
+                expect.objectContaining({
+                    currentUserBalance: 0,
+                    hasFinancialActivity: false,
+                    lastActivityAt: null,
+                }),
+            ]);
+        });
+    });
+
     describe('findOne', () => {
         it('returns the group when found', async () => {
             prisma.group.findUnique.mockResolvedValue(group);

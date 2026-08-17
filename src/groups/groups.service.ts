@@ -6,9 +6,11 @@ import {
 } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { BalancesService } from '../balances/balances.service';
+import { calculateNetBalances } from '../balances/balance-calculator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
+import { GroupSummaryResponseDto } from './dto/group-summary-response.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
 type GroupWithMembers = Group & { members: GroupMember[] };
@@ -47,6 +49,68 @@ export class GroupsService {
             include: { members: { where: ACTIVE_MEMBER } },
         });
         return groups.map((group) => this.toResponse(group));
+    }
+
+    async findAllSummaries(userId: string): Promise<GroupSummaryResponseDto[]> {
+        const groups = await this.prisma.group.findMany({
+            where: { members: { some: { userId, ...ACTIVE_MEMBER } } },
+            include: {
+                members: { where: ACTIVE_MEMBER },
+                expenses: {
+                    select: {
+                        paidByUserId: true,
+                        createdAt: true,
+                        splits: { select: { userId: true, amount: true } },
+                    },
+                },
+                payments: {
+                    select: {
+                        fromUserId: true,
+                        toUserId: true,
+                        amount: true,
+                        createdAt: true,
+                    },
+                },
+            },
+        });
+
+        return groups.map((group) => {
+            const memberIds = group.members.map((member) => member.userId);
+            const balances = calculateNetBalances(
+                memberIds,
+                group.expenses.map((expense) => ({
+                    paidByUserId: expense.paidByUserId,
+                    splits: expense.splits.map((split) => ({
+                        userId: split.userId,
+                        amount: split.amount.toNumber(),
+                    })),
+                })),
+                group.payments.map((payment) => ({
+                    fromUserId: payment.fromUserId,
+                    toUserId: payment.toUserId,
+                    amount: payment.amount.toNumber(),
+                })),
+            );
+            const activityDates = [
+                ...group.expenses.map((expense) => expense.createdAt),
+                ...group.payments.map((payment) => payment.createdAt),
+            ];
+            const lastActivityAt = activityDates.reduce<Date | null>(
+                (latest, date) => (!latest || date > latest ? date : latest),
+                null,
+            );
+
+            return {
+                id: group.id,
+                name: group.name,
+                memberIds,
+                memberCount: memberIds.length,
+                currentUserBalance: balances.find((entry) => entry.userId === userId)?.balance ?? 0,
+                hasFinancialActivity: activityDates.length > 0,
+                lastActivityAt: lastActivityAt?.toISOString() ?? null,
+                createdAt: group.createdAt.toISOString(),
+            };
+        });
     }
 
     async findOne(id: string): Promise<GroupResponseDto> {
