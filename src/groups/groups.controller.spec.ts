@@ -6,6 +6,7 @@ import { GroupsService } from './groups.service';
 type MockedGroupsService = {
     create: jest.Mock;
     findAll: jest.Mock;
+    findAllSummaries: jest.Mock;
     findOne: jest.Mock;
     remove: jest.Mock;
     update: jest.Mock;
@@ -27,6 +28,7 @@ describe('GroupsController', () => {
         groupsService = {
             create: jest.fn(),
             findAll: jest.fn(),
+            findAllSummaries: jest.fn(),
             findOne: jest.fn(),
             remove: jest.fn(),
             update: jest.fn(),
@@ -47,6 +49,14 @@ describe('GroupsController', () => {
 
         await expect(controller.findAll(currentUser)).resolves.toEqual([group]);
         expect(groupsService.findAll).toHaveBeenCalledWith('user-1');
+    });
+
+    it('delegates group summaries to the service scoped to the current user', async () => {
+        const summaries = [{ ...group, memberCount: 2, currentUserBalance: 0 }];
+        groupsService.findAllSummaries.mockResolvedValue(summaries);
+
+        await expect(controller.findAllSummaries(currentUser)).resolves.toEqual(summaries);
+        expect(groupsService.findAllSummaries).toHaveBeenCalledWith('user-1');
     });
 
     it('delegates findOne to the service', async () => {

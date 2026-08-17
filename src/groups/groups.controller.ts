@@ -21,6 +21,7 @@ import { GroupMembershipGuard } from '../common/guards/group-membership.guard';
 import { JwtPayload } from '../common/jwt-payload';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
+import { GroupSummaryResponseDto } from './dto/group-summary-response.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsService } from './groups.service';
 
@@ -73,6 +74,20 @@ export class GroupsController {
     @ApiUnauthorizedError()
     findAll(@CurrentUser() user: JwtPayload): Promise<GroupResponseDto[]> {
         return this.groupsService.findAll(user.sub);
+    }
+
+    @Get('summaries')
+    @ApiOperation({
+        summary: "List the caller's groups with current balance and latest activity",
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'The group summaries.',
+        type: [GroupSummaryResponseDto],
+    })
+    @ApiUnauthorizedError()
+    findAllSummaries(@CurrentUser() user: JwtPayload): Promise<GroupSummaryResponseDto[]> {
+        return this.groupsService.findAllSummaries(user.sub);
     }
 
     @UseGuards(GroupMembershipGuard)

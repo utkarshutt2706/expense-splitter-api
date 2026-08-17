@@ -16,10 +16,11 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtPayload } from '../common/jwt-payload';
 import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
+import { FriendResponseDto } from './dto/friend-response.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { PublicUser, UsersService } from './users.service';
+import { Friend, PublicUser, UsersService } from './users.service';
 
 @ApiBearerAuth('access-token')
 @Controller('users')
@@ -78,7 +79,7 @@ export class UsersController {
     @ApiResponse({
         status: 200,
         description: 'The friend list (may be empty).',
-        type: [UserResponseDto],
+        type: [FriendResponseDto],
     })
     @ApiResponse({
         status: 401,
@@ -86,7 +87,7 @@ export class UsersController {
         type: ErrorResponseDto,
         example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
     })
-    findFriends(@CurrentUser() user: JwtPayload): Promise<PublicUser[]> {
+    findFriends(@CurrentUser() user: JwtPayload): Promise<Friend[]> {
         return this.usersService.findFriends(user.sub);
     }
 
