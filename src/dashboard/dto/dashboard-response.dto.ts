@@ -28,6 +28,20 @@ export class DashboardMonthlySpendDto {
     currentUserShare: number;
 }
 
+export class DashboardDailySpendDto {
+    @ApiProperty({ example: '2026-08-17' })
+    date: string;
+
+    @ApiProperty({ example: 4800 })
+    amount: number;
+
+    @ApiProperty({ example: 3200 })
+    actualPaid: number;
+
+    @ApiProperty({ example: 1600 })
+    currentUserShare: number;
+}
+
 export class DashboardGroupSpendDto {
     @ApiProperty({ example: 'group-id' })
     groupId: string;
@@ -52,6 +66,9 @@ export class DashboardGroupSpendDto {
 
     @ApiProperty({ type: [DashboardMonthlySpendDto] })
     spendingByMonth: DashboardMonthlySpendDto[];
+
+    @ApiProperty({ type: [DashboardDailySpendDto] })
+    spendingByDay: DashboardDailySpendDto[];
 }
 
 export class DashboardResponseDto {
