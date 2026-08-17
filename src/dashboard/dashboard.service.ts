@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { calculateNetBalances } from '../balances/balance-calculator';
 import { PrismaService } from '../prisma/prisma.service';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
@@ -7,7 +7,8 @@ import { DashboardResponseDto } from './dto/dashboard-response.dto';
 export class DashboardService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async getDashboard(userId: string): Promise<DashboardResponseDto> {
+    async getDashboard(userId: string, from?: string, to?: string): Promise<DashboardResponseDto> {
+        const dateRange = this.dateRange(from, to);
         const groups = await this.prisma.group.findMany({
             where: { members: { some: { userId, leftAt: null } } },
             include: {
@@ -15,8 +16,8 @@ export class DashboardService {
                     where: { leftAt: null },
                     include: { user: { select: { id: true, name: true } } },
                 },
-                expenses: { include: { splits: true } },
-                payments: true,
+                expenses: { where: dateRange, include: { splits: true } },
+                payments: { where: dateRange },
             },
         });
 
@@ -123,5 +124,21 @@ export class DashboardService {
 
     private fromCents(value: number): number {
         return value / 100;
+    }
+
+    private dateRange(from?: string, to?: string): { createdAt?: { gte: Date; lt: Date } } {
+        if (!from && !to) return {};
+        if (!from || !to) throw new BadRequestException('Both from and to are required');
+
+        const start = new Date(from);
+        const end = new Date(to);
+        if (start >= end) throw new BadRequestException('from must be before to');
+
+        const maximumEnd = new Date(start);
+        maximumEnd.setUTCFullYear(maximumEnd.getUTCFullYear() + 1);
+        if (end > maximumEnd) {
+            throw new BadRequestException('Dashboard date range cannot exceed one year');
+        }
+        return { createdAt: { gte: start, lt: end } };
     }
 }

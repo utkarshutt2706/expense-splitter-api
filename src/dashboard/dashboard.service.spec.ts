@@ -83,4 +83,46 @@ describe('DashboardService', () => {
             groupSpend: [],
         });
     });
+
+    it('filters expenses and settlement payments using an exclusive end instant', async () => {
+        findMany.mockResolvedValue([]);
+        await service.getDashboard('me', '2026-08-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z');
+        expect(findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                // Jest asymmetric matchers are intentionally typed as any.
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                include: expect.objectContaining({
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    expenses: expect.objectContaining({
+                        where: {
+                            createdAt: {
+                                gte: new Date('2026-08-01T00:00:00.000Z'),
+                                lt: new Date('2026-09-01T00:00:00.000Z'),
+                            },
+                        },
+                    }),
+                    payments: {
+                        where: {
+                            createdAt: {
+                                gte: new Date('2026-08-01T00:00:00.000Z'),
+                                lt: new Date('2026-09-01T00:00:00.000Z'),
+                            },
+                        },
+                    },
+                }),
+            }),
+        );
+    });
+
+    it('rejects incomplete, reversed, and longer-than-one-year ranges', async () => {
+        await expect(service.getDashboard('me', '2026-01-01T00:00:00.000Z')).rejects.toThrow(
+            'Both from and to are required',
+        );
+        await expect(
+            service.getDashboard('me', '2026-02-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+        ).rejects.toThrow('from must be before to');
+        await expect(
+            service.getDashboard('me', '2026-01-01T00:00:00.000Z', '2027-01-01T00:00:00.001Z'),
+        ).rejects.toThrow('cannot exceed one year');
+    });
 });
