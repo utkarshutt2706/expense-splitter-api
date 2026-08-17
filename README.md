@@ -76,16 +76,6 @@ after a quiet period can take 30–50 seconds to wake it back up. The public `/h
 endpoint verifies database connectivity as well as HTTP availability, returning
 `503 Service Unavailable` if PostgreSQL cannot be queried.
 
-The scheduled health probe requires the following repository Actions configuration:
-
-- Variables: `RENDER_SERVICE_URL` (the public Render URL) and `HEALTH_ALERT_EMAIL`
-- Secrets: `GMAIL_USER` and `GMAIL_APP_PASSWORD`
-
-The probe keeps the service warm during expected usage hours. If the endpoint is
-unreachable or unhealthy after retries, its GitHub-hosted runner sends the status and
-response to `HEALTH_ALERT_EMAIL` through Gmail SMTP. Alert delivery intentionally
-runs outside the backend so it still works when the service itself is unavailable.
-
 ## Local development
 
 1. Install dependencies: `pnpm install`
