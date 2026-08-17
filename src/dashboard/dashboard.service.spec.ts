@@ -70,6 +70,10 @@ describe('DashboardService', () => {
             { month: '2026-07', amount: 120, actualPaid: 120, currentUserShare: 60 },
             { month: '2026-08', amount: 80.25, actualPaid: 0, currentUserShare: 20.25 },
         ]);
+        expect(result.groupSpend[0]?.spendingByDay).toEqual([
+            { date: '2026-07-10', amount: 120, actualPaid: 120, currentUserShare: 60 },
+            { date: '2026-08-10', amount: 80.25, actualPaid: 0, currentUserShare: 20.25 },
+        ]);
         expect(result.groupSpend[1]).toEqual(
             expect.objectContaining({ groupId: 'empty', amount: 0 }),
         );

@@ -30,20 +30,32 @@ export class DashboardService {
                 string,
                 { amount: number; actualPaid: number; currentUserShare: number }
             >();
+            const dailySpend = new Map<
+                string,
+                { amount: number; actualPaid: number; currentUserShare: number }
+            >();
 
             for (const expense of group.expenses) {
                 const amount = this.toCents(expense.amount.toNumber());
                 const month = expense.createdAt.toISOString().slice(0, 7);
+                const date = expense.createdAt.toISOString().slice(0, 10);
                 const monthly = monthlySpend.get(month) ?? {
+                    amount: 0,
+                    actualPaid: 0,
+                    currentUserShare: 0,
+                };
+                const daily = dailySpend.get(date) ?? {
                     amount: 0,
                     actualPaid: 0,
                     currentUserShare: 0,
                 };
                 totalCents += amount;
                 monthly.amount += amount;
+                daily.amount += amount;
                 if (expense.paidByUserId === userId) {
                     paidCents += amount;
                     monthly.actualPaid += amount;
+                    daily.actualPaid += amount;
                 }
                 for (const split of expense.splits) {
                     const splitCents = this.toCents(split.amount.toNumber());
@@ -51,9 +63,11 @@ export class DashboardService {
                     if (split.userId === userId) {
                         shareCents += splitCents;
                         monthly.currentUserShare += splitCents;
+                        daily.currentUserShare += splitCents;
                     }
                 }
                 monthlySpend.set(month, monthly);
+                dailySpend.set(date, daily);
             }
 
             const balances = calculateNetBalances(
@@ -98,6 +112,14 @@ export class DashboardService {
                         currentUserShare: this.fromCents(monthly.currentUserShare),
                     }))
                     .sort((left, right) => left.month.localeCompare(right.month)),
+                spendingByDay: [...dailySpend.entries()]
+                    .map(([date, daily]) => ({
+                        date,
+                        amount: this.fromCents(daily.amount),
+                        actualPaid: this.fromCents(daily.actualPaid),
+                        currentUserShare: this.fromCents(daily.currentUserShare),
+                    }))
+                    .sort((left, right) => left.date.localeCompare(right.date)),
             };
         });
 
