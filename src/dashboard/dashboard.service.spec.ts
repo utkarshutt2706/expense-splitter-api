@@ -5,85 +5,81 @@ import { DashboardService } from './dashboard.service';
 const decimal = (value: number): Prisma.Decimal => new Prisma.Decimal(value);
 
 describe('DashboardService', () => {
-    let findMany: jest.Mock;
-    let service: DashboardService;
+    const findMany = jest.fn();
+    const service = new DashboardService({ group: { findMany } } as unknown as PrismaService);
 
-    beforeEach(() => {
-        findMany = jest.fn();
-        service = new DashboardService({ expense: { findMany } } as unknown as PrismaService);
-    });
+    beforeEach(() => findMany.mockReset());
 
-    it('aggregates actual payments, member shares, and group spend', async () => {
+    it('keeps expense spending and settlement-aware balances distinct', async () => {
         findMany.mockResolvedValue([
             {
-                amount: decimal(120),
-                paidByUserId: 'me',
-                group: { id: 'trip', name: 'Trip' },
-                splits: [
-                    { userId: 'me', amount: decimal(60), user: { id: 'me', name: 'Me' } },
-                    { userId: 'friend', amount: decimal(60), user: { id: 'friend', name: 'Asha' } },
+                id: 'trip',
+                name: 'Trip',
+                members: [
+                    { userId: 'me', user: { id: 'me', name: 'Me' } },
+                    { userId: 'friend', user: { id: 'friend', name: 'Asha' } },
                 ],
+                expenses: [
+                    {
+                        createdAt: new Date('2026-07-10T00:00:00Z'),
+                        amount: decimal(120),
+                        paidByUserId: 'me',
+                        splits: [
+                            { userId: 'me', amount: decimal(60) },
+                            { userId: 'friend', amount: decimal(60) },
+                        ],
+                    },
+                    {
+                        createdAt: new Date('2026-08-10T00:00:00Z'),
+                        amount: decimal(80.25),
+                        paidByUserId: 'friend',
+                        splits: [
+                            { userId: 'me', amount: decimal(20.25) },
+                            { userId: 'friend', amount: decimal(60) },
+                        ],
+                    },
+                ],
+                payments: [{ fromUserId: 'friend', toUserId: 'me', amount: decimal(20) }],
             },
             {
-                amount: decimal(80.25),
-                paidByUserId: 'friend',
-                group: { id: 'trip', name: 'Trip' },
-                splits: [
-                    { userId: 'me', amount: decimal(20.25), user: { id: 'me', name: 'Me' } },
-                    { userId: 'friend', amount: decimal(60), user: { id: 'friend', name: 'Asha' } },
-                ],
-            },
-            {
-                amount: decimal(40),
-                paidByUserId: 'me',
-                group: { id: 'home', name: 'Home' },
-                splits: [{ userId: 'me', amount: decimal(40), user: { id: 'me', name: 'Me' } }],
+                id: 'empty',
+                name: 'Empty group',
+                members: [{ userId: 'me', user: { id: 'me', name: 'Me' } }],
+                expenses: [],
+                payments: [],
             },
         ]);
 
-        await expect(service.getDashboard('me')).resolves.toEqual({
-            actualPaid: 160,
-            currentUserShare: 120.25,
-            memberShares: [
-                { userId: 'me', name: 'Me', amount: 120.25, isCurrentUser: true },
-                { userId: 'friend', name: 'Asha', amount: 120, isCurrentUser: false },
-            ],
-            groupSpend: [
-                {
-                    groupId: 'trip',
-                    name: 'Trip',
-                    amount: 200.25,
-                    actualPaid: 120,
-                    currentUserShare: 80.25,
-                    memberShares: [
-                        { userId: 'friend', name: 'Asha', amount: 120, isCurrentUser: false },
-                        { userId: 'me', name: 'Me', amount: 80.25, isCurrentUser: true },
-                    ],
-                },
-                {
-                    groupId: 'home',
-                    name: 'Home',
-                    amount: 40,
-                    actualPaid: 40,
-                    currentUserShare: 40,
-                    memberShares: [{ userId: 'me', name: 'Me', amount: 40, isCurrentUser: true }],
-                },
-            ],
-        });
-        expect(findMany).toHaveBeenCalledWith(
+        const result = await service.getDashboard('me');
+        expect(result.actualPaid).toBe(120);
+        expect(result.currentUserShare).toBe(80.25);
+        expect(result.groupSpend[0]).toEqual(
             expect.objectContaining({
-                where: { group: { members: { some: { userId: 'me', leftAt: null } } } },
+                groupId: 'trip',
+                amount: 200.25,
+                actualPaid: 120,
+                currentUserShare: 80.25,
+                currentBalance: 19.75,
             }),
+        );
+        expect(result.groupSpend[0]?.memberShares).toEqual([
+            { userId: 'friend', name: 'Asha', amount: 120, isCurrentUser: false },
+            { userId: 'me', name: 'Me', amount: 80.25, isCurrentUser: true },
+        ]);
+        expect(result.groupSpend[0]?.spendingByMonth).toEqual([
+            { month: '2026-07', amount: 120, actualPaid: 120, currentUserShare: 60 },
+            { month: '2026-08', amount: 80.25, actualPaid: 0, currentUserShare: 20.25 },
+        ]);
+        expect(result.groupSpend[1]).toEqual(
+            expect.objectContaining({ groupId: 'empty', amount: 0 }),
         );
     });
 
-    it('returns an empty dashboard when the user has no expenses', async () => {
+    it('returns no groups when the user has none', async () => {
         findMany.mockResolvedValue([]);
-
         await expect(service.getDashboard('me')).resolves.toEqual({
             actualPaid: 0,
             currentUserShare: 0,
-            memberShares: [],
             groupSpend: [],
         });
     });

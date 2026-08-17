@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { calculateNetBalances } from '../balances/balance-calculator';
 import { PrismaService } from '../prisma/prisma.service';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
 
@@ -7,124 +8,120 @@ export class DashboardService {
     constructor(private readonly prisma: PrismaService) {}
 
     async getDashboard(userId: string): Promise<DashboardResponseDto> {
-        const expenses = await this.prisma.expense.findMany({
-            where: {
-                group: {
-                    members: { some: { userId, leftAt: null } },
-                },
-            },
+        const groups = await this.prisma.group.findMany({
+            where: { members: { some: { userId, leftAt: null } } },
             include: {
-                group: { select: { id: true, name: true } },
-                splits: {
-                    include: {
-                        user: { select: { id: true, name: true } },
-                    },
+                members: {
+                    where: { leftAt: null },
+                    include: { user: { select: { id: true, name: true } } },
                 },
+                expenses: { include: { splits: true } },
+                payments: true,
             },
         });
 
-        let actualPaid = 0;
-        let currentUserShare = 0;
-        const memberShares = new Map<string, { name: string; amount: number }>();
-        const groupSpend = new Map<
-            string,
-            {
-                name: string;
-                amount: number;
-                actualPaid: number;
-                currentUserShare: number;
-                memberShares: Map<string, { name: string; amount: number }>;
-            }
-        >();
+        const groupSummaries = groups.map((group) => {
+            let totalCents = 0;
+            let paidCents = 0;
+            let shareCents = 0;
+            const shares = new Map(group.members.map(({ user }) => [user.id, 0]));
+            const monthlySpend = new Map<
+                string,
+                { amount: number; actualPaid: number; currentUserShare: number }
+            >();
 
-        for (const expense of expenses) {
-            const expenseAmount = expense.amount.toNumber();
-            if (expense.paidByUserId === userId) {
-                actualPaid += expenseAmount;
-            }
-
-            const group = groupSpend.get(expense.group.id) ?? {
-                name: expense.group.name,
-                amount: 0,
-                actualPaid: 0,
-                currentUserShare: 0,
-                memberShares: new Map<string, { name: string; amount: number }>(),
-            };
-            group.amount += expenseAmount;
-            if (expense.paidByUserId === userId) {
-                group.actualPaid += expenseAmount;
-            }
-            groupSpend.set(expense.group.id, group);
-
-            for (const split of expense.splits) {
-                const splitAmount = split.amount.toNumber();
-                const member = memberShares.get(split.userId) ?? {
-                    name: split.user.name,
+            for (const expense of group.expenses) {
+                const amount = this.toCents(expense.amount.toNumber());
+                const month = expense.createdAt.toISOString().slice(0, 7);
+                const monthly = monthlySpend.get(month) ?? {
                     amount: 0,
+                    actualPaid: 0,
+                    currentUserShare: 0,
                 };
-                member.amount += splitAmount;
-                memberShares.set(split.userId, member);
-
-                const groupMember = group.memberShares.get(split.userId) ?? {
-                    name: split.user.name,
-                    amount: 0,
-                };
-                groupMember.amount += splitAmount;
-                group.memberShares.set(split.userId, groupMember);
-                if (split.userId === userId) {
-                    currentUserShare += splitAmount;
-                    group.currentUserShare += splitAmount;
+                totalCents += amount;
+                monthly.amount += amount;
+                if (expense.paidByUserId === userId) {
+                    paidCents += amount;
+                    monthly.actualPaid += amount;
                 }
+                for (const split of expense.splits) {
+                    const splitCents = this.toCents(split.amount.toNumber());
+                    shares.set(split.userId, (shares.get(split.userId) ?? 0) + splitCents);
+                    if (split.userId === userId) {
+                        shareCents += splitCents;
+                        monthly.currentUserShare += splitCents;
+                    }
+                }
+                monthlySpend.set(month, monthly);
             }
-        }
 
+            const balances = calculateNetBalances(
+                group.members.map(({ userId: memberId }) => memberId),
+                group.expenses.map((expense) => ({
+                    paidByUserId: expense.paidByUserId,
+                    splits: expense.splits.map((split) => ({
+                        userId: split.userId,
+                        amount: split.amount.toNumber(),
+                    })),
+                })),
+                group.payments.map((payment) => ({
+                    fromUserId: payment.fromUserId,
+                    toUserId: payment.toUserId,
+                    amount: payment.amount.toNumber(),
+                })),
+            );
+
+            return {
+                groupId: group.id,
+                name: group.name,
+                amount: this.fromCents(totalCents),
+                actualPaid: this.fromCents(paidCents),
+                currentUserShare: this.fromCents(shareCents),
+                currentBalance: balances.find((entry) => entry.userId === userId)?.balance ?? 0,
+                memberShares: group.members
+                    .map(({ user }) => ({
+                        userId: user.id,
+                        name: user.name,
+                        amount: this.fromCents(shares.get(user.id) ?? 0),
+                        isCurrentUser: user.id === userId,
+                    }))
+                    .sort(
+                        (left, right) =>
+                            right.amount - left.amount || left.name.localeCompare(right.name),
+                    ),
+                spendingByMonth: [...monthlySpend.entries()]
+                    .map(([month, monthly]) => ({
+                        month,
+                        amount: this.fromCents(monthly.amount),
+                        actualPaid: this.fromCents(monthly.actualPaid),
+                        currentUserShare: this.fromCents(monthly.currentUserShare),
+                    }))
+                    .sort((left, right) => left.month.localeCompare(right.month)),
+            };
+        });
+
+        groupSummaries.sort(
+            (left, right) => right.amount - left.amount || left.name.localeCompare(right.name),
+        );
         return {
-            actualPaid: this.roundMoney(actualPaid),
-            currentUserShare: this.roundMoney(currentUserShare),
-            memberShares: [...memberShares.entries()]
-                .map(([memberUserId, member]) => ({
-                    userId: memberUserId,
-                    name: member.name,
-                    amount: this.roundMoney(member.amount),
-                    isCurrentUser: memberUserId === userId,
-                }))
-                .sort(
-                    (left, right) =>
-                        right.amount - left.amount || left.name.localeCompare(right.name),
+            actualPaid: this.fromCents(
+                groupSummaries.reduce((sum, group) => sum + this.toCents(group.actualPaid), 0),
+            ),
+            currentUserShare: this.fromCents(
+                groupSummaries.reduce(
+                    (sum, group) => sum + this.toCents(group.currentUserShare),
+                    0,
                 ),
-            groupSpend: [...groupSpend.entries()]
-                .map(([groupId, group]) => ({
-                    groupId,
-                    name: group.name,
-                    amount: this.roundMoney(group.amount),
-                    actualPaid: this.roundMoney(group.actualPaid),
-                    currentUserShare: this.roundMoney(group.currentUserShare),
-                    memberShares: this.toMemberShares(group.memberShares, userId),
-                }))
-                .sort(
-                    (left, right) =>
-                        right.amount - left.amount || left.name.localeCompare(right.name),
-                ),
+            ),
+            groupSpend: groupSummaries,
         };
     }
 
-    private roundMoney(value: number): number {
-        return Math.round((value + Number.EPSILON) * 100) / 100;
+    private toCents(value: number): number {
+        return Math.round(value * 100);
     }
 
-    private toMemberShares(
-        shares: Map<string, { name: string; amount: number }>,
-        currentUserId: string,
-    ) {
-        return [...shares.entries()]
-            .map(([userId, member]) => ({
-                userId,
-                name: member.name,
-                amount: this.roundMoney(member.amount),
-                isCurrentUser: userId === currentUserId,
-            }))
-            .sort(
-                (left, right) => right.amount - left.amount || left.name.localeCompare(right.name),
-            );
+    private fromCents(value: number): number {
+        return value / 100;
     }
 }
