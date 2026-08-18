@@ -29,29 +29,20 @@ export class UsersController {
 
     @Get('lookup')
     @ApiOperation({
-        summary: 'Find a registered user by exact email or phone',
+        summary: 'Search registered users by name, email or phone',
         description:
-            'Exactly one of email/phone must be provided. Used to decide between adding an ' +
-            'already-registered user directly, or inviting an unregistered email to a group.',
+            'Returns matching users whose name, email or phone contains the supplied query string.',
     })
-    @ApiResponse({ status: 200, description: 'A user matches.', type: UserResponseDto })
+    @ApiResponse({
+        status: 200,
+        description: 'Users matching the search.',
+        type: [UserResponseDto],
+    })
     @ApiResponse({
         status: 400,
-        description: 'Neither or both of email/phone were provided.',
+        description: 'The query parameter is missing or empty.',
         type: ErrorResponseDto,
-        examples: {
-            neither: {
-                summary: 'Neither provided',
-                value: errorExample('VALIDATION_ERROR', 'email or phone is required'),
-            },
-            both: {
-                summary: 'Both provided',
-                value: errorExample(
-                    'VALIDATION_ERROR',
-                    'Provide only one of email or phone, not both',
-                ),
-            },
-        },
+        example: errorExample('VALIDATION_ERROR', 'query is required'),
     })
     @ApiResponse({
         status: 401,
@@ -59,13 +50,7 @@ export class UsersController {
         type: ErrorResponseDto,
         example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
     })
-    @ApiResponse({
-        status: 404,
-        description: 'No registered user matches.',
-        type: ErrorResponseDto,
-        example: errorExample('NOT_FOUND', 'No registered user matches that email or phone'),
-    })
-    lookup(@Query() dto: LookupUserDto): Promise<PublicUser> {
+    lookup(@Query() dto: LookupUserDto): Promise<PublicUser[]> {
         return this.usersService.lookup(dto);
     }
 

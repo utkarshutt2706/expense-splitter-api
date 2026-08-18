@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
 import { PrismaService } from '../prisma/prisma.service';
+import { LookupUserDto } from './dto/lookup-user.dto';
 import { PublicUser, UsersService } from './users.service';
 
 function knownRequestError(
@@ -72,42 +74,60 @@ describe('UsersService', () => {
     });
 
     describe('lookup', () => {
-        it('throws BadRequestException when both email and phone are given', async () => {
-            await expect(service.lookup({ email: 'a@example.com', phone: '123' })).rejects.toThrow(
-                BadRequestException,
-            );
-        });
-
-        it('throws BadRequestException when neither email nor phone is given', async () => {
+        it('throws BadRequestException when query is missing', async () => {
             await expect(service.lookup({})).rejects.toThrow(BadRequestException);
         });
 
-        it('finds a user by email', async () => {
-            prisma.user.findUnique.mockResolvedValue(user);
+        it('throws BadRequestException when query is only whitespace', async () => {
+            await expect(service.lookup({ query: '   ' })).rejects.toThrow(BadRequestException);
+        });
 
-            await expect(service.lookup({ email: 'utkarsh@example.com' })).resolves.toEqual(user);
-            expect(prisma.user.findUnique).toHaveBeenCalledWith({
-                where: { email: 'utkarsh@example.com' },
+        it('finds users by fuzzy match across name, email and phone', async () => {
+            prisma.user.findMany.mockResolvedValue([user]);
+
+            await expect(service.lookup({ query: 'utkar' })).resolves.toEqual([user]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: {
+                    OR: [
+                        { name: { contains: 'utkar', mode: 'insensitive' } },
+                        { email: { contains: 'utkar', mode: 'insensitive' } },
+                        { phone: { contains: 'utkar', mode: 'insensitive' } },
+                    ],
+                },
                 omit: { passwordHash: true },
+                orderBy: { name: 'asc' },
             });
         });
 
-        it('finds a user by phone', async () => {
-            prisma.user.findUnique.mockResolvedValue(user);
+        it('trims whitespace before matching user records', async () => {
+            prisma.user.findMany.mockResolvedValue([user]);
 
-            await expect(service.lookup({ phone: '9876543210' })).resolves.toEqual(user);
-            expect(prisma.user.findUnique).toHaveBeenCalledWith({
-                where: { phone: '9876543210' },
+            await expect(service.lookup({ query: '  utkar  ' })).resolves.toEqual([user]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: {
+                    OR: [
+                        { name: { contains: 'utkar', mode: 'insensitive' } },
+                        { email: { contains: 'utkar', mode: 'insensitive' } },
+                        { phone: { contains: 'utkar', mode: 'insensitive' } },
+                    ],
+                },
                 omit: { passwordHash: true },
+                orderBy: { name: 'asc' },
             });
         });
 
-        it('throws NotFoundException when no user matches', async () => {
-            prisma.user.findUnique.mockResolvedValue(null);
+        it('returns an empty array when no user matches', async () => {
+            prisma.user.findMany.mockResolvedValue([]);
 
-            await expect(service.lookup({ email: 'nobody@example.com' })).rejects.toThrow(
-                NotFoundException,
-            );
+            await expect(service.lookup({ query: 'nobody' })).resolves.toEqual([]);
+        });
+    });
+
+    describe('LookupUserDto', () => {
+        it('trims the query before validation', () => {
+            const dto = plainToInstance(LookupUserDto, { query: '  jamie@example.com  ' });
+
+            expect(dto).toEqual({ query: 'jamie@example.com' });
         });
     });
 
