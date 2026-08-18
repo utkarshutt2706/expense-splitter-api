@@ -1,6 +1,7 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../../prisma/prisma.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 type MockRequest = {
@@ -8,15 +9,29 @@ type MockRequest = {
     user?: unknown;
 };
 
+type MockPrismaUserLookup = {
+    findUnique: jest.MockedFunction<(args: unknown) => Promise<{ phone: string | null } | null>>;
+};
+
 describe('JwtAuthGuard', () => {
     let reflector: Reflector;
     let jwtService: { verifyAsync: jest.Mock };
+    let prisma: { user: MockPrismaUserLookup };
     let guard: JwtAuthGuard;
 
     beforeEach(() => {
         reflector = new Reflector();
         jwtService = { verifyAsync: jest.fn() };
-        guard = new JwtAuthGuard(reflector, jwtService as unknown as JwtService);
+        prisma = {
+            user: {
+                findUnique: jest.fn<(args: unknown) => Promise<{ phone: string | null } | null>>(),
+            },
+        };
+        guard = new JwtAuthGuard(
+            reflector,
+            jwtService as unknown as JwtService,
+            prisma as unknown as PrismaService,
+        );
     });
 
     function mockContext(request: MockRequest): ExecutionContext {
@@ -65,10 +80,24 @@ describe('JwtAuthGuard', () => {
         );
     });
 
-    it('allows a valid token and attaches the payload to the request', async () => {
+    it('rejects when the user does not have a phone number on file', async () => {
+        jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
+        jwtService.verifyAsync.mockResolvedValue({ sub: 'user-1', email: 'user@example.com' });
+        prisma.user.findUnique.mockResolvedValue({ phone: null });
+        const request: MockRequest = { header: () => 'Bearer good-token' };
+
+        await expect(guard.canActivate(mockContext(request))).rejects.toThrow(ForbiddenException);
+        expect(prisma.user.findUnique).toHaveBeenCalledWith({
+            where: { id: 'user-1' },
+            select: { phone: true },
+        });
+    });
+
+    it('allows a valid token and attaches the payload to the request when the user has a phone number', async () => {
         jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
         const payload = { sub: 'user-1', email: 'user@example.com' };
         jwtService.verifyAsync.mockResolvedValue(payload);
+        prisma.user.findUnique.mockResolvedValue({ phone: '9876543210' });
         const request: MockRequest = { header: () => 'Bearer good-token' };
 
         await expect(guard.canActivate(mockContext(request))).resolves.toBe(true);

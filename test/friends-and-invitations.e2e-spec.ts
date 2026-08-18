@@ -22,6 +22,7 @@ async function registerUser(
             name,
             email,
             password: 'correct-horse-battery-staple',
+            phone: `9${String(Math.random()).slice(2, 11)}`.slice(0, 10),
             inviteToken: overrides.inviteToken,
         })
         .expect(201);

@@ -25,6 +25,8 @@ export class AuthService {
     ) {}
 
     async register(dto: RegisterDto): Promise<AuthTokenResponseDto> {
+        const phone = dto.phone.trim();
+
         const passwordHash = await hashPassword(dto.password);
 
         const user = await this.prisma.$transaction(async (tx) => {
@@ -35,7 +37,7 @@ export class AuthService {
             let created: Omit<User, 'passwordHash'>;
             try {
                 created = await tx.user.create({
-                    data: { name: dto.name, email: dto.email, phone: dto.phone, passwordHash },
+                    data: { name: dto.name, email: dto.email, phone, passwordHash },
                     omit: { passwordHash: true },
                 });
             } catch (error) {
