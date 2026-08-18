@@ -1,9 +1,16 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+    CanActivate,
+    ExecutionContext,
+    ForbiddenException,
+    Injectable,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { RequestWithUser } from '../interfaces/request-with-user.interface';
 import { JwtPayload } from '../jwt-payload';
+import { PrismaService } from '../../prisma/prisma.service';
 
 const BEARER_PREFIX = 'Bearer ';
 
@@ -12,6 +19,7 @@ export class JwtAuthGuard implements CanActivate {
     constructor(
         private readonly reflector: Reflector,
         private readonly jwtService: JwtService,
+        private readonly prisma: PrismaService,
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -37,6 +45,17 @@ export class JwtAuthGuard implements CanActivate {
             request.user = await this.jwtService.verifyAsync<JwtPayload>(token);
         } catch {
             throw new UnauthorizedException('Invalid or expired token');
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: { id: request.user.sub },
+            select: { phone: true },
+        });
+
+        if (!user || !user.phone) {
+            throw new ForbiddenException(
+                'Phone number is required. Please add your phone number before continuing.',
+            );
         }
 
         return true;

@@ -20,7 +20,12 @@ describe('Change password (e2e)', () => {
         email = `${randomUUID()}@example.com`;
         const response = await request(app.getHttpServer())
             .post('/auth/register')
-            .send({ name: 'Password Changer', email, password: 'original-password' })
+            .send({
+                name: 'Password Changer',
+                email,
+                password: 'original-password',
+                phone: '9876543210',
+            })
             .expect(201);
         user = response.body as AuthResponse;
     });

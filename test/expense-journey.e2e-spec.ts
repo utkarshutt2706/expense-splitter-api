@@ -13,7 +13,12 @@ async function registerUser(app: INestApplication<App>, name: string): Promise<A
     const email = `${randomUUID()}@example.com`;
     const response = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ name, email, password: 'correct-horse-battery-staple' })
+        .send({
+            name,
+            email,
+            password: 'correct-horse-battery-staple',
+            phone: `9${String(Math.random()).slice(2, 11)}`.slice(0, 10),
+        })
         .expect(201);
     return response.body as AuthResponse;
 }
