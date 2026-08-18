@@ -3,6 +3,12 @@ import { IsString } from 'class-validator';
 
 export class LookupUserDto {
     @IsString()
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Transform(({ value }: { value: unknown }): string => {
+        if (typeof value !== 'string') {
+            return '';
+        }
+
+        return value.trim();
+    })
     query!: string;
 }

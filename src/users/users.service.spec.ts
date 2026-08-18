@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
 import { PrismaService } from '../prisma/prisma.service';
+import { LookupUserDto } from './dto/lookup-user.dto';
 import { PublicUser, UsersService } from './users.service';
 
 function knownRequestError(
@@ -76,6 +78,10 @@ describe('UsersService', () => {
             await expect(service.lookup({})).rejects.toThrow(BadRequestException);
         });
 
+        it('throws BadRequestException when query is only whitespace', async () => {
+            await expect(service.lookup({ query: '   ' })).rejects.toThrow(BadRequestException);
+        });
+
         it('finds users by fuzzy match across name, email and phone', async () => {
             prisma.user.findMany.mockResolvedValue([user]);
 
@@ -93,10 +99,35 @@ describe('UsersService', () => {
             });
         });
 
+        it('trims whitespace before matching user records', async () => {
+            prisma.user.findMany.mockResolvedValue([user]);
+
+            await expect(service.lookup({ query: '  utkar  ' })).resolves.toEqual([user]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: {
+                    OR: [
+                        { name: { contains: 'utkar', mode: 'insensitive' } },
+                        { email: { contains: 'utkar', mode: 'insensitive' } },
+                        { phone: { contains: 'utkar', mode: 'insensitive' } },
+                    ],
+                },
+                omit: { passwordHash: true },
+                orderBy: { name: 'asc' },
+            });
+        });
+
         it('returns an empty array when no user matches', async () => {
             prisma.user.findMany.mockResolvedValue([]);
 
             await expect(service.lookup({ query: 'nobody' })).resolves.toEqual([]);
+        });
+    });
+
+    describe('LookupUserDto', () => {
+        it('trims the query before validation', () => {
+            const dto = plainToInstance(LookupUserDto, { query: '  jamie@example.com  ' });
+
+            expect(dto).toEqual({ query: 'jamie@example.com' });
         });
     });
 
