@@ -34,22 +34,24 @@ export class UsersService {
         return user;
     }
 
-    async lookup(dto: LookupUserDto): Promise<PublicUser> {
-        if (dto.email && dto.phone) {
-            throw new BadRequestException('Provide only one of email or phone, not both');
-        }
-        if (!dto.email && !dto.phone) {
-            throw new BadRequestException('email or phone is required');
+    async lookup(dto: LookupUserDto): Promise<PublicUser[]> {
+        const search = dto.query?.trim();
+
+        if (!search) {
+            throw new BadRequestException('query is required');
         }
 
-        const user = await this.prisma.user.findUnique({
-            where: dto.email ? { email: dto.email } : { phone: dto.phone as string },
+        return this.prisma.user.findMany({
+            where: {
+                OR: [
+                    { name: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                    { phone: { contains: search, mode: 'insensitive' } },
+                ],
+            },
             omit: { passwordHash: true },
+            orderBy: { name: 'asc' },
         });
-        if (!user) {
-            throw new NotFoundException('No registered user matches that email or phone');
-        }
-        return user;
     }
 
     findManyByIds(dto: BatchLookupUsersDto): Promise<PublicUser[]> {

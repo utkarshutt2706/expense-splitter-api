@@ -37,10 +37,10 @@ describe('UsersController', () => {
     });
 
     it('delegates lookup to the service', async () => {
-        usersService.lookup.mockResolvedValue(user);
+        usersService.lookup.mockResolvedValue([user]);
 
-        await expect(controller.lookup({ email: 'a@example.com' })).resolves.toEqual(user);
-        expect(usersService.lookup).toHaveBeenCalledWith({ email: 'a@example.com' });
+        await expect(controller.lookup({ query: 'utkar' })).resolves.toEqual([user]);
+        expect(usersService.lookup).toHaveBeenCalledWith({ query: 'utkar' });
     });
 
     it('delegates findFriends to the service using the caller id', async () => {

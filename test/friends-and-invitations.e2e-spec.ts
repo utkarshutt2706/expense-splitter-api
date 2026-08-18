@@ -84,19 +84,20 @@ describe('Friends and invitations (e2e)', () => {
         expect(response.body).toEqual([]);
     });
 
-    it('finds a registered user by exact email via lookup, and 404s for an unregistered one', async () => {
+    it('finds registered users by fuzzy lookup and returns an empty list for no matches', async () => {
         const found = await request(app.getHttpServer())
             .get('/users/lookup')
-            .query({ email: userB.user.email })
+            .query({ query: 'Bob' })
             .set('Authorization', `Bearer ${userA.accessToken}`)
             .expect(200);
-        expect((found.body as { id: string }).id).toBe(userB.user.id);
+        expect((found.body as { id: string }[]).map((user) => user.id)).toContain(userB.user.id);
 
-        await request(app.getHttpServer())
+        const empty = await request(app.getHttpServer())
             .get('/users/lookup')
-            .query({ email: `${randomUUID()}@example.com` })
+            .query({ query: `${randomUUID()}` })
             .set('Authorization', `Bearer ${userA.accessToken}`)
-            .expect(404);
+            .expect(200);
+        expect(empty.body).toEqual([]);
     });
 
     it('adds the looked-up user to the group directly, making them friends', async () => {
