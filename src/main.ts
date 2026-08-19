@@ -3,12 +3,14 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ControllerErrorLoggingInterceptor } from './common/interceptors/controller-error-logging.interceptor';
 import { createDocsBasicAuthMiddleware } from './common/middleware/docs-basic-auth.middleware';
 import { isOriginAllowed, parseAllowedOrigins } from './config/cors';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    app.useGlobalInterceptors(new ControllerErrorLoggingInterceptor());
     app.useGlobalFilters(new HttpExceptionFilter());
 
     app.useGlobalPipes(

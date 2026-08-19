@@ -6,7 +6,8 @@ import {
     HttpStatus,
     Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { CONTROLLER_ERROR_LOGGED } from '../interceptors/controller-error-logging.interceptor';
 
 const STATUS_TO_CODE: Partial<Record<number, string>> = {
     [HttpStatus.BAD_REQUEST]: 'VALIDATION_ERROR',
@@ -23,9 +24,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     catch(exception: unknown, host: ArgumentsHost): void {
         const response = host.switchToHttp().getResponse<Response>();
+        const request = host
+            .switchToHttp()
+            .getRequest<
+                Request & { [CONTROLLER_ERROR_LOGGED]?: boolean; user?: { sub?: string } }
+            >();
 
         if (exception instanceof HttpException) {
             const status = exception.getStatus();
+            this.logIfNeeded(request, status, exception.message, exception.stack);
             response.status(status).json({
                 error: {
                     code: STATUS_TO_CODE[status] ?? 'ERROR',
@@ -35,10 +42,36 @@ export class HttpExceptionFilter implements ExceptionFilter {
             return;
         }
 
-        this.logger.error(exception instanceof Error ? exception.stack : exception);
+        this.logIfNeeded(
+            request,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            'Unexpected error',
+            exception instanceof Error ? exception.stack : String(exception),
+        );
         response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
             error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
         });
+    }
+
+    private logIfNeeded(
+        request: Request & { [CONTROLLER_ERROR_LOGGED]?: boolean; user?: { sub?: string } },
+        status: number,
+        message: string,
+        stack?: string,
+    ): void {
+        if (request[CONTROLLER_ERROR_LOGGED]) {
+            return;
+        }
+
+        this.logger.error(
+            `Request failed | ${request.method} ${this.getRoutePath(request)} | ` +
+                `status=${status} | user=${request.user?.sub ?? 'anonymous'} | ${message}`,
+            stack,
+        );
+    }
+
+    private getRoutePath(request: Request): string {
+        return (request.route as { path?: string } | undefined)?.path ?? request.path;
     }
 
     private extractMessage(exception: HttpException): string {
