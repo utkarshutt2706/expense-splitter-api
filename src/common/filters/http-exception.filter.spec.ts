@@ -23,6 +23,11 @@ describe('HttpExceptionFilter', () => {
         return {
             switchToHttp: () => ({
                 getResponse: () => res,
+                getRequest: () => ({
+                    method: 'GET',
+                    path: '/test',
+                    route: { path: '/test' },
+                }),
             }),
         } as unknown as ArgumentsHost;
     }
