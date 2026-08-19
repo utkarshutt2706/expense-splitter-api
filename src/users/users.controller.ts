@@ -12,6 +12,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { AllowMissingPhone } from '../common/decorators/allow-missing-phone.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtPayload } from '../common/jwt-payload';
@@ -123,6 +124,7 @@ export class UsersController {
         return this.usersService.findOne(id);
     }
 
+    @AllowMissingPhone()
     @Patch(':id')
     @ApiOperation({
         summary: "Update the caller's own account",
