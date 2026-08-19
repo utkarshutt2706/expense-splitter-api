@@ -2,8 +2,10 @@ import { Type } from 'class-transformer';
 import {
     ArrayMinSize,
     IsArray,
+    IsDateString,
     IsEnum,
     IsNumber,
+    IsOptional,
     IsPositive,
     IsString,
     MaxLength,
@@ -15,6 +17,7 @@ import { SplitType } from '@prisma/client';
 import { PercentageInputDto } from './percentage-input.dto';
 import { ShareInputDto } from './share-input.dto';
 import { SplitDto } from './split.dto';
+import { IsNotFutureDate } from '../../common/decorators/is-not-future-date.decorator';
 
 export class CreateExpenseDto {
     @IsString()
@@ -25,6 +28,11 @@ export class CreateExpenseDto {
     @IsNumber()
     @IsPositive()
     amount: number;
+
+    @IsOptional()
+    @IsDateString()
+    @IsNotFutureDate()
+    paidOn?: string;
 
     @IsString()
     @MinLength(1)

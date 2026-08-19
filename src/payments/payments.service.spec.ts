@@ -30,12 +30,13 @@ describe('PaymentsService', () => {
     const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
     const createdAt = new Date('2026-07-24T10:00:00.000Z');
 
-    const payment = {
+    const payment: Prisma.Payment = {
         id: 'payment-1',
         groupId: 'group-1',
         fromUserId: 'user-1',
         toUserId: 'user-2',
         amount: dec(500),
+        paidOn: createdAt,
         createdAt,
     };
 
@@ -50,7 +51,7 @@ describe('PaymentsService', () => {
                 delete: jest.fn(),
             },
         };
-        service = new PaymentsService(prisma as unknown as PrismaService);
+        service = new PaymentsService(prisma as PrismaService);
         prisma.group.findUnique.mockResolvedValue(group);
     });
 
@@ -69,6 +70,22 @@ describe('PaymentsService', () => {
             expect(prisma.payment.create).not.toHaveBeenCalled();
         });
 
+        it('defaults paidOn to today when omitted', async () => {
+            const createMock = prisma.payment.create as jest.MockedFunction<
+                (args: { data: { paidOn: Date } }) => Promise<unknown>
+            >;
+            createMock.mockImplementation((args) => {
+                expect(args.data.paidOn).toBeInstanceOf(Date);
+                return Promise.resolve({ ...payment, paidOn: new Date() });
+            });
+
+            await service.create('group-1', {
+                fromUserId: 'user-1',
+                toUserId: 'user-2',
+                amount: 500,
+            });
+        });
+
         it('creates a payment and maps it to the response shape', async () => {
             prisma.payment.create.mockResolvedValue(payment);
 
@@ -84,6 +101,7 @@ describe('PaymentsService', () => {
                 fromUserId: 'user-1',
                 toUserId: 'user-2',
                 amount: 500,
+                paidOn: createdAt.toISOString(),
                 createdAt: createdAt.toISOString(),
             });
         });
@@ -127,6 +145,7 @@ describe('PaymentsService', () => {
                     fromUserId: 'user-1',
                     toUserId: 'user-2',
                     amount: 500,
+                    paidOn: createdAt.toISOString(),
                     createdAt: createdAt.toISOString(),
                 },
             ]);
@@ -162,13 +181,23 @@ describe('PaymentsService', () => {
         });
 
         it('replaces the payment and maps it to the response shape', async () => {
-            const updated = {
-                ...payment,
+            const updated: Prisma.Payment = {
+                id: 'payment-1',
+                groupId: 'group-1',
                 fromUserId: dto.fromUserId,
                 toUserId: dto.toUserId,
                 amount: dec(dto.amount),
+                paidOn: createdAt,
+                createdAt,
             };
-            prisma.payment.update.mockResolvedValue(updated);
+            const updateMock = prisma.payment.update as jest.MockedFunction<
+                (args: { where: { id: string }; data: { paidOn: Date } }) => Promise<unknown>
+            >;
+            updateMock.mockImplementation((args) => {
+                expect(args.where.id).toBe('payment-1');
+                expect(args.data.paidOn).toBeInstanceOf(Date);
+                return Promise.resolve(updated);
+            });
 
             await expect(service.update('group-1', 'payment-1', dto)).resolves.toEqual({
                 id: 'payment-1',
@@ -176,11 +205,8 @@ describe('PaymentsService', () => {
                 fromUserId: 'user-2',
                 toUserId: 'user-1',
                 amount: 750,
+                paidOn: createdAt.toISOString(),
                 createdAt: createdAt.toISOString(),
-            });
-            expect(prisma.payment.update).toHaveBeenCalledWith({
-                where: { id: 'payment-1' },
-                data: dto,
             });
         });
 

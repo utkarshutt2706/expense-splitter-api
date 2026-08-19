@@ -31,6 +31,7 @@ export class ExpensesService {
 
         const submitted: Split[] = dto.splits;
         this.validateSplits(dto);
+        const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
             const expense = await this.prisma.expense.create({
@@ -41,6 +42,7 @@ export class ExpensesService {
                     paidByUserId: dto.paidByUserId,
                     createdByUserId,
                     splitType: dto.splitType,
+                    paidOn,
                     splits: {
                         create: submitted.map((split) => ({
                             userId: split.userId,
@@ -81,6 +83,7 @@ export class ExpensesService {
     async update(groupId: string, id: string, dto: UpdateExpenseDto): Promise<ExpenseResponseDto> {
         await this.findOne(groupId, id);
         this.validateSplits(dto);
+        const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
             await this.prisma.$transaction([
@@ -92,6 +95,7 @@ export class ExpensesService {
                         amount: dto.amount,
                         paidByUserId: dto.paidByUserId,
                         splitType: dto.splitType,
+                        paidOn,
                         splits: {
                             create: dto.splits.map((split) => ({
                                 userId: split.userId,
@@ -173,19 +177,23 @@ export class ExpensesService {
     }
 
     private toResponse(expense: ExpenseWithSplits): ExpenseResponseDto {
+        const paidOnValue = new Date(String(expense.paidOn ?? expense.createdAt));
+        const amount = Number(expense.amount);
+
         return {
             id: expense.id,
             groupId: expense.groupId,
             description: expense.description,
-            amount: expense.amount.toNumber(),
+            amount,
             paidByUserId: expense.paidByUserId,
             createdByUserId: expense.createdByUserId,
             splitType: expense.splitType,
             splits: expense.splits.map((split) => ({
                 userId: split.userId,
-                amount: split.amount.toNumber(),
+                amount: Number(split.amount),
             })),
-            createdAt: expense.createdAt.toISOString(),
+            paidOn: paidOnValue.toISOString(),
+            createdAt: new Date(String(expense.createdAt)).toISOString(),
         };
     }
 

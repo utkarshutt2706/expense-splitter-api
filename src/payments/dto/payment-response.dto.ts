@@ -4,5 +4,6 @@ export class PaymentResponseDto {
     fromUserId: string;
     toUserId: string;
     amount: number;
+    paidOn: string;
     createdAt: string;
 }
