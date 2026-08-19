@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@ne
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ALLOW_MISSING_PHONE_KEY } from '../decorators/allow-missing-phone.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 type MockRequest = {
@@ -91,6 +92,19 @@ describe('JwtAuthGuard', () => {
             where: { id: 'user-1' },
             select: { phone: true },
         });
+    });
+
+    it('allows a phone-less user through a route that permits adding a phone number', async () => {
+        jest.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+            key === ALLOW_MISSING_PHONE_KEY ? true : false,
+        );
+        const payload = { sub: 'user-1', email: 'user@example.com' };
+        jwtService.verifyAsync.mockResolvedValue(payload);
+        prisma.user.findUnique.mockResolvedValue({ phone: null });
+        const request: MockRequest = { header: () => 'Bearer good-token' };
+
+        await expect(guard.canActivate(mockContext(request))).resolves.toBe(true);
+        expect(request.user).toEqual(payload);
     });
 
     it('allows a valid token and attaches the payload to the request when the user has a phone number', async () => {

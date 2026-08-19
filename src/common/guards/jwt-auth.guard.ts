@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { ALLOW_MISSING_PHONE_KEY } from '../decorators/allow-missing-phone.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { RequestWithUser } from '../interfaces/request-with-user.interface';
 import { JwtPayload } from '../jwt-payload';
@@ -31,6 +32,11 @@ export class JwtAuthGuard implements CanActivate {
             return true;
         }
 
+        const allowMissingPhone = this.reflector.getAllAndOverride<boolean>(
+            ALLOW_MISSING_PHONE_KEY,
+            [context.getHandler(), context.getClass()],
+        );
+
         const request = context.switchToHttp().getRequest<RequestWithUser>();
         const authHeader = request.header('authorization');
         const token = authHeader?.startsWith(BEARER_PREFIX)
@@ -52,7 +58,7 @@ export class JwtAuthGuard implements CanActivate {
             select: { phone: true },
         });
 
-        if (!user || !user.phone) {
+        if (!user || (!user.phone && !allowMissingPhone)) {
             throw new ForbiddenException(
                 'Phone number is required. Please add your phone number before continuing.',
             );
