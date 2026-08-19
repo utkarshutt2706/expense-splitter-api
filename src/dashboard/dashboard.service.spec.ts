@@ -22,6 +22,7 @@ describe('DashboardService', () => {
                 expenses: [
                     {
                         createdAt: new Date('2026-07-10T00:00:00Z'),
+                        paidOn: new Date('2026-07-09T00:00:00Z'),
                         amount: decimal(120),
                         paidByUserId: 'me',
                         splits: [
@@ -31,6 +32,7 @@ describe('DashboardService', () => {
                     },
                     {
                         createdAt: new Date('2026-08-10T00:00:00Z'),
+                        paidOn: new Date('2026-08-10T00:00:00Z'),
                         amount: decimal(80.25),
                         paidByUserId: 'friend',
                         splits: [
@@ -71,7 +73,7 @@ describe('DashboardService', () => {
             { month: '2026-08', amount: 80.25, actualPaid: 0, currentUserShare: 20.25 },
         ]);
         expect(result.groupSpend[0]?.spendingByDay).toEqual([
-            { date: '2026-07-10', amount: 120, actualPaid: 120, currentUserShare: 60 },
+            { date: '2026-07-09', amount: 120, actualPaid: 120, currentUserShare: 60 },
             { date: '2026-08-10', amount: 80.25, actualPaid: 0, currentUserShare: 20.25 },
         ]);
         expect(result.groupSpend[1]).toEqual(
@@ -99,7 +101,7 @@ describe('DashboardService', () => {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     expenses: expect.objectContaining({
                         where: {
-                            createdAt: {
+                            paidOn: {
                                 gte: new Date('2026-08-01T00:00:00.000Z'),
                                 lt: new Date('2026-09-01T00:00:00.000Z'),
                             },
@@ -107,7 +109,7 @@ describe('DashboardService', () => {
                     }),
                     payments: {
                         where: {
-                            createdAt: {
+                            paidOn: {
                                 gte: new Date('2026-08-01T00:00:00.000Z'),
                                 lt: new Date('2026-09-01T00:00:00.000Z'),
                             },
