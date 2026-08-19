@@ -37,8 +37,8 @@ export class DashboardService {
 
             for (const expense of group.expenses) {
                 const amount = this.toCents(expense.amount.toNumber());
-                const month = expense.createdAt.toISOString().slice(0, 7);
-                const date = expense.createdAt.toISOString().slice(0, 10);
+                const month = expense.paidOn.toISOString().slice(0, 7);
+                const date = expense.paidOn.toISOString().slice(0, 10);
                 const monthly = monthlySpend.get(month) ?? {
                     amount: 0,
                     actualPaid: 0,
@@ -148,7 +148,7 @@ export class DashboardService {
         return value / 100;
     }
 
-    private dateRange(from?: string, to?: string): { createdAt?: { gte: Date; lt: Date } } {
+    private dateRange(from?: string, to?: string): { paidOn?: { gte: Date; lt: Date } } {
         if (!from && !to) return {};
         if (!from || !to) throw new BadRequestException('Both from and to are required');
 
@@ -161,6 +161,6 @@ export class DashboardService {
         if (end > maximumEnd) {
             throw new BadRequestException('Dashboard date range cannot exceed one year');
         }
-        return { createdAt: { gte: start, lt: end } };
+        return { paidOn: { gte: start, lt: end } };
     }
 }
