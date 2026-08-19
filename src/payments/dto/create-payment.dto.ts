@@ -1,4 +1,12 @@
-import { IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
+import {
+    IsDateString,
+    IsNumber,
+    IsOptional,
+    IsPositive,
+    IsString,
+    MinLength,
+} from 'class-validator';
+import { IsNotFutureDate } from '../../common/decorators/is-not-future-date.decorator';
 
 export class CreatePaymentDto {
     @IsString()
@@ -12,4 +20,9 @@ export class CreatePaymentDto {
     @IsNumber()
     @IsPositive()
     amount: number;
+
+    @IsOptional()
+    @IsDateString()
+    @IsNotFutureDate()
+    paidOn?: string;
 }

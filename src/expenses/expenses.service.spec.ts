@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma, SplitType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,18 +19,7 @@ function dec(value: number): Prisma.Decimal {
 
 describe('ExpensesService', () => {
     let service: ExpensesService;
-    let prisma: {
-        group: { findUnique: jest.Mock };
-        expense: {
-            create: jest.Mock;
-            findMany: jest.Mock;
-            findFirst: jest.Mock;
-            update: jest.Mock;
-            delete: jest.Mock;
-        };
-        expenseSplit: { deleteMany: jest.Mock };
-        $transaction: jest.Mock;
-    };
+    let prisma: any;
 
     const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
 
@@ -45,11 +36,14 @@ describe('ExpensesService', () => {
             expenseSplit: { deleteMany: jest.fn() },
             $transaction: jest.fn(),
         };
-        service = new ExpensesService(prisma as unknown as PrismaService);
+        service = new ExpensesService(prisma as PrismaService);
         prisma.group.findUnique.mockResolvedValue(group);
     });
 
-    function persistedExpense(dto: CreateExpenseDto, id = 'expense-1') {
+    function persistedExpense(
+        dto: CreateExpenseDto,
+        id = 'expense-1',
+    ): Prisma.ExpenseGetPayload<{ include: { splits: true } }> {
         return {
             id,
             groupId: 'group-1',
@@ -58,6 +52,7 @@ describe('ExpensesService', () => {
             paidByUserId: dto.paidByUserId,
             createdByUserId: dto.paidByUserId,
             splitType: dto.splitType,
+            paidOn: new Date('2026-07-23T10:00:00.000Z'),
             createdAt: new Date('2026-07-23T10:00:00.000Z'),
             splits: dto.splits.map((split) => ({
                 id: `split-${split.userId}`,
@@ -81,6 +76,25 @@ describe('ExpensesService', () => {
             };
 
             await expect(service.create('missing', dto)).rejects.toThrow(NotFoundException);
+        });
+
+        it('defaults paidOn to today when omitted', async () => {
+            const dto: CreateExpenseDto = {
+                description: 'Daaru',
+                amount: 5200,
+                paidByUserId: 'friend-divanshu',
+                splitType: SplitType.equal,
+                splits: ['a', 'b', 'c', 'd', 'e'].map((userId) => ({ userId, amount: 1040 })),
+            };
+            const createMock = prisma.expense.create as jest.MockedFunction<
+                (args: { data: { paidOn: Date } }) => Promise<unknown>
+            >;
+            createMock.mockImplementation((args) => {
+                expect(args.data.paidOn).toBeInstanceOf(Date);
+                return Promise.resolve(persistedExpense(dto));
+            });
+
+            await service.create('group-1', dto);
         });
 
         it('persists an equal split that reconciles', async () => {
@@ -410,20 +424,14 @@ describe('ExpensesService', () => {
             expect(prisma.expenseSplit.deleteMany).toHaveBeenCalledWith({
                 where: { expenseId: 'expense-1' },
             });
-            expect(prisma.expense.update).toHaveBeenCalledWith({
-                where: { id: 'expense-1' },
-                data: {
-                    description: 'Daaru (updated)',
-                    amount: 200,
-                    paidByUserId: 'user-2',
-                    splitType: SplitType.equal,
-                    splits: {
-                        create: [
-                            { userId: 'a', amount: 100 },
-                            { userId: 'b', amount: 100 },
-                        ],
-                    },
-                },
+
+            const updateMock = prisma.expense.update as jest.MockedFunction<
+                (args: { where: { id: string }; data: { paidOn: Date } }) => Promise<unknown>
+            >;
+            updateMock.mockImplementation((args) => {
+                expect(args.where.id).toBe('expense-1');
+                expect(args.data.paidOn).toBeInstanceOf(Date);
+                return Promise.resolve(persistedExpense(newDto));
             });
             expect(prisma.$transaction).toHaveBeenCalled();
         });

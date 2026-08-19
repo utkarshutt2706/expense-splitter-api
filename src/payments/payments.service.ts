@@ -13,6 +13,7 @@ export class PaymentsService {
         await this.ensureGroupExists(groupId);
 
         this.validateParticipants(dto);
+        const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
             const payment = await this.prisma.payment.create({
@@ -21,6 +22,7 @@ export class PaymentsService {
                     fromUserId: dto.fromUserId,
                     toUserId: dto.toUserId,
                     amount: dto.amount,
+                    paidOn,
                 },
             });
             return this.toResponse(payment);
@@ -42,6 +44,7 @@ export class PaymentsService {
     async update(groupId: string, id: string, dto: UpdatePaymentDto): Promise<PaymentResponseDto> {
         await this.ensurePaymentExists(groupId, id);
         this.validateParticipants(dto);
+        const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
             const payment = await this.prisma.payment.update({
@@ -50,6 +53,7 @@ export class PaymentsService {
                     fromUserId: dto.fromUserId,
                     toUserId: dto.toUserId,
                     amount: dto.amount,
+                    paidOn,
                 },
             });
             return this.toResponse(payment);
@@ -89,13 +93,17 @@ export class PaymentsService {
     }
 
     private toResponse(payment: Payment): PaymentResponseDto {
+        const paidOnValue = new Date(String(payment.paidOn ?? payment.createdAt));
+        const amount = Number(payment.amount);
+
         return {
             id: payment.id,
             groupId: payment.groupId,
             fromUserId: payment.fromUserId,
             toUserId: payment.toUserId,
-            amount: payment.amount.toNumber(),
-            createdAt: payment.createdAt.toISOString(),
+            amount,
+            paidOn: paidOnValue.toISOString(),
+            createdAt: new Date(String(payment.createdAt)).toISOString(),
         };
     }
 

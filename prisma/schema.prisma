@@ -86,14 +86,15 @@ enum SplitType {
 }
 
 model Expense {
-  id           String    @id @default(uuid())
-  groupId      String
-  description  String
-  amount       Decimal   @db.Decimal(12, 2)
-  paidByUserId String
+  id              String    @id @default(uuid())
+  groupId         String
+  description     String
+  amount          Decimal   @db.Decimal(12, 2)
+  paidByUserId    String
   createdByUserId String
-  splitType    SplitType
-  createdAt    DateTime  @default(now())
+  splitType       SplitType
+  paidOn          DateTime  @default(now())
+  createdAt       DateTime  @default(now())
 
   group  Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   paidBy User           @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
@@ -122,6 +123,7 @@ model Payment {
   fromUserId String
   toUserId   String
   amount     Decimal  @db.Decimal(12, 2)
+  paidOn     DateTime @default(now())
   createdAt  DateTime @default(now())
 
   group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
