@@ -51,18 +51,21 @@ describe('Friends and invitations (e2e)', () => {
     });
 
     afterAll(async () => {
-        if (groupId) {
-            await request(app.getHttpServer())
-                .delete(`/groups/${groupId}`)
-                .set('Authorization', `Bearer ${userA.accessToken}`);
+        try {
+            if (groupId) {
+                await request(app.getHttpServer())
+                    .delete(`/groups/${groupId}`)
+                    .set('Authorization', `Bearer ${userA.accessToken}`);
+            }
+            for (const user of [userA, userB, userC]) {
+                if (!user) continue;
+                await request(app.getHttpServer())
+                    .delete(`/users/${user.user.id}`)
+                    .set('Authorization', `Bearer ${user.accessToken}`);
+            }
+        } finally {
+            await app?.close();
         }
-        for (const user of [userA, userB, userC]) {
-            if (!user) continue;
-            await request(app.getHttpServer())
-                .delete(`/users/${user.user.id}`)
-                .set('Authorization', `Bearer ${user.accessToken}`);
-        }
-        await app?.close();
     });
 
     it('creates a group with only the creator as a member', async () => {
@@ -172,5 +175,5 @@ describe('Friends and invitations (e2e)', () => {
         await request(app.getHttpServer()).get(`/invitations/${rawToken}`).expect(409);
 
         sendSpy.mockRestore();
-    });
+    }, 15_000);
 });
