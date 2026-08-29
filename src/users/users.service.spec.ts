@@ -200,11 +200,15 @@ describe('UsersService', () => {
             const result = await service.findFriends('user-1');
 
             expect(prisma.groupMember.findMany).toHaveBeenNthCalledWith(1, {
-                where: { userId: 'user-1' },
+                where: { userId: 'user-1', leftAt: null },
                 select: { groupId: true },
             });
             expect(prisma.groupMember.findMany).toHaveBeenNthCalledWith(2, {
-                where: { groupId: { in: ['group-1', 'group-2'] }, userId: { not: 'user-1' } },
+                where: {
+                    groupId: { in: ['group-1', 'group-2'] },
+                    userId: { not: 'user-1' },
+                    leftAt: null,
+                },
                 select: { userId: true, groupId: true },
             });
             expect(result.map((u) => u.id)).toEqual(['user-2', 'user-3']);
@@ -221,6 +225,15 @@ describe('UsersService', () => {
                 where: { id: { in: ['user-2', 'user-3'] } },
                 omit: { passwordHash: true },
             });
+            expect(prisma.group.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    // Jest asymmetric matchers are intentionally typed as any.
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    select: expect.objectContaining({
+                        members: { where: { leftAt: null }, select: { userId: true } },
+                    }),
+                }),
+            );
         });
     });
 

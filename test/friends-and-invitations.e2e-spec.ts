@@ -173,4 +173,26 @@ describe('Friends and invitations (e2e)', () => {
 
         sendSpy.mockRestore();
     });
+
+    it('stops counting a former group member as a friend', async () => {
+        await request(app.getHttpServer())
+            .patch(`/groups/${groupId}`)
+            .set('Authorization', `Bearer ${userA.accessToken}`)
+            .send({ memberIds: [userA.user.id, userC.user.id] })
+            .expect(200);
+
+        const friendsOfA = await request(app.getHttpServer())
+            .get('/users/me/friends')
+            .set('Authorization', `Bearer ${userA.accessToken}`)
+            .expect(200);
+        expect(friendsOfA.body).toEqual([
+            expect.objectContaining({ id: userC.user.id, sharedGroupCount: 1 }),
+        ]);
+
+        const friendsOfB = await request(app.getHttpServer())
+            .get('/users/me/friends')
+            .set('Authorization', `Bearer ${userB.accessToken}`)
+            .expect(200);
+        expect(friendsOfB.body).toEqual([]);
+    });
 });

@@ -63,7 +63,7 @@ export class UsersService {
 
     async findFriends(userId: string): Promise<Friend[]> {
         const myGroups = await this.prisma.groupMember.findMany({
-            where: { userId },
+            where: { userId, leftAt: null },
             select: { groupId: true },
         });
         const groupIds = myGroups.map((membership) => membership.groupId);
@@ -71,7 +71,11 @@ export class UsersService {
 
         const [friendMemberships, groups] = await Promise.all([
             this.prisma.groupMember.findMany({
-                where: { groupId: { in: groupIds }, userId: { not: userId } },
+                where: {
+                    groupId: { in: groupIds },
+                    userId: { not: userId },
+                    leftAt: null,
+                },
                 select: { userId: true, groupId: true },
             }),
             this.prisma.group.findMany({
@@ -79,7 +83,7 @@ export class UsersService {
                 select: {
                     id: true,
                     name: true,
-                    members: { select: { userId: true } },
+                    members: { where: { leftAt: null }, select: { userId: true } },
                     expenses: {
                         select: {
                             paidByUserId: true,
