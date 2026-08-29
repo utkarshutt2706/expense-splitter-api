@@ -8,18 +8,23 @@ interface HealthResponse {
     checks: { database: 'up' };
 }
 
+interface ReadinessResponse {
+    status: 'ok';
+    checks: { system: 'up' };
+}
+
 const DATABASE_CHECK_TIMEOUT_MS = 3_000;
 
-@Controller('health')
+@Controller()
 export class HealthController {
     private readonly logger = new Logger(HealthController.name);
 
     constructor(private readonly prisma: PrismaService) {}
 
     @Public()
-    @Get()
+    @Get('health')
     @ApiOperation({
-        summary: 'Readiness check',
+        summary: 'Database health check',
         description: 'Always public. Returns 200 only when the API can query its database.',
     })
     @ApiResponse({
@@ -43,6 +48,22 @@ export class HealthController {
             );
             throw new ServiceUnavailableException('Database health check failed');
         }
+    }
+
+    @Public()
+    @Get('readiness')
+    @ApiOperation({
+        summary: 'System readiness check',
+        description:
+            'Always public. Confirms that the API process can handle requests without querying external dependencies.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'API process is responsive.',
+        schema: { example: { status: 'ok', checks: { system: 'up' } } },
+    })
+    readiness(): ReadinessResponse {
+        return { status: 'ok', checks: { system: 'up' } };
     }
 
     private async withTimeout<T>(operation: Promise<T>): Promise<T> {

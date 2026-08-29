@@ -20,7 +20,8 @@ it's free and takes about ten minutes. See below.
 
 ## Features
 
-- JWT-based registration and login, gating every endpoint except `/health`
+- JWT-based registration and login, gating every endpoint except `/health` and
+  `/readiness`
 - Users and friends CRUD with unique contact validation
 - Groups CRUD, with a single partial-update endpoint for rename and membership
   changes (membership replacement is a full `memberIds` array, not a delta).
@@ -32,7 +33,7 @@ it's free and takes about ten minutes. See below.
   get-by-id/update/delete)
 - Group balances: net balance per member and a Simplify Debt–minimized settlement
   list, computed from expenses and payments together
-- Health check endpoint for uptime monitoring
+- Separate process-readiness and database-aware health-check endpoints
 
 ## Deploy your own instance
 
@@ -71,9 +72,14 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 
 Database schema migrations run automatically as part of the app's start command
 (`pnpm prisma:migrate:deploy`, ahead of every boot) — nothing extra to configure.
-Render's free tier spins the service down after inactivity, so the first request
-after a quiet period can take 30–50 seconds to wake it back up. The public `/health`
-endpoint verifies database connectivity as well as HTTP availability, returning
+Render's free tier spins the service down after inactivity. A scheduled GitHub Actions
+probe calls the public `/readiness` endpoint every five minutes during expected usage
+hours to keep the API process warm without querying PostgreSQL, leaving an overnight
+idle window from approximately 04:00 to 07:00 IST. Set the `RENDER_SERVICE_URL`
+repository Actions variable to the public Render service URL to enable the probe.
+
+The public `/readiness` endpoint checks only that the API process can respond. The
+public `/health` endpoint additionally verifies database connectivity and returns
 `503 Service Unavailable` if PostgreSQL cannot be queried.
 
 ## Local development
@@ -87,8 +93,8 @@ endpoint verifies database connectivity as well as HTTP availability, returning
 
 Real per-user authentication: `POST /auth/register` creates an account (name, email,
 phone, password), `POST /auth/login` validates credentials, and both return a signed
-JWT alongside the user. Every request except `/health`, `/auth/register`, and
-`/auth/login` requires that token as `Authorization: Bearer <token>` — tokens are
+JWT alongside the user. Every request except `/health`, `/readiness`,
+`/auth/register`, and `/auth/login` requires that token as `Authorization: Bearer <token>` — tokens are
 signed with `JWT_SECRET` and expire after 7 days, with no refresh flow yet.
 
 A user created as a mere expense/split participant (via `POST /users`, e.g. adding a

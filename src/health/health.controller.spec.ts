@@ -33,6 +33,14 @@ describe('HealthController', () => {
         expect(logSpy).toHaveBeenCalledWith('Health check passed: database is reachable');
     });
 
+    it('reports the API process as ready without querying the database', () => {
+        expect(controller.readiness()).toEqual({
+            status: 'ok',
+            checks: { system: 'up' },
+        });
+        expect(queryRaw).not.toHaveBeenCalled();
+    });
+
     it('reports unavailable when the database query fails', async () => {
         queryRaw.mockRejectedValue(new Error('connection refused'));
 
