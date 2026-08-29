@@ -4,6 +4,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      nestjs-framework:
+        patterns:
+          - "@nestjs/common"
+          - "@nestjs/core"
+          - "@nestjs/platform-*"
+          - "@nestjs/testing"
   - package-ecosystem: github-actions
     directory: /
     schedule:
