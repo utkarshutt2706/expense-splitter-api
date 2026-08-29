@@ -38,7 +38,7 @@
         "@nestjs/platform-express": "^11.2.1",
         "@nestjs/swagger": "^11.4.7",
         "@prisma/adapter-pg": "^7.9.1",
-        "@prisma/client": "^7.9.1",
+        "@prisma/client": "^7.10.0",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.15.1",
         "nodemailer": "^9.0.5",
@@ -50,7 +50,7 @@
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.2.0",
-        "@eslint/js": "^9.18.0",
+        "@eslint/js": "^10.0.1",
         "@nestjs/cli": "^11.0.0",
         "@nestjs/schematics": "^11.0.0",
         "@nestjs/testing": "^11.2.1",
