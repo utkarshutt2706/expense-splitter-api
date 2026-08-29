@@ -1,0 +1,46 @@
+name: Keep Render awake
+
+on:
+  schedule:
+    # GitHub cron uses UTC. Probe every 5 minutes from 06:52 through
+    # 03:42 IST, allowing Render to idle from about 04:00 until the wake-up
+    # request shortly before 07:00 IST. These probes never query Neon.
+    - cron: '22,27,32,37,42,47,52,57 1 * * *'
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 2-21 * * *'
+    - cron: '2,7,12 22 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify service URL is configured
+        env:
+          RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+        run: |
+          if [ -z "$RENDER_SERVICE_URL" ]; then
+            echo "::error::Set the RENDER_SERVICE_URL repository variable to the public Render service URL."
+            exit 1
+          fi
+
+      - name: Probe system readiness endpoint
+        env:
+          RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+        run: |
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-all-errors \
+            --retry-max-time 150 \
+            --connect-timeout 10 \
+            --max-time 75 \
+            "${RENDER_SERVICE_URL%/}/readiness"

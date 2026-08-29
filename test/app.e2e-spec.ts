@@ -17,6 +17,13 @@ describe('AppModule (e2e)', () => {
             .expect({ status: 'ok', checks: { database: 'up' } });
     });
 
+    it('/readiness (GET)', () => {
+        return request(app.getHttpServer())
+            .get('/readiness')
+            .expect(200)
+            .expect({ status: 'ok', checks: { system: 'up' } });
+    });
+
     afterEach(async () => {
         await app?.close();
     });
