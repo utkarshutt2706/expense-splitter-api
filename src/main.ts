@@ -1,12 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ControllerErrorLoggingInterceptor } from './common/interceptors/controller-error-logging.interceptor';
 import { createDocsBasicAuthMiddleware } from './common/middleware/docs-basic-auth.middleware';
 import { isOriginAllowed, parseAllowedOrigins } from './config/cors';
+import { createSwaggerConfig } from './config/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -29,13 +30,7 @@ async function bootstrap() {
     const apiKey = process.env.API_KEY ?? '';
     app.use(['/docs', '/docs-json', '/docs-yaml'], createDocsBasicAuthMiddleware(apiKey));
 
-    const swaggerConfig = new DocumentBuilder()
-        .setTitle('Expense Splitter API')
-        .setDescription('REST API for the Expense Splitter application')
-        .setVersion('0.0.1')
-        .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
-        .build();
-    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    const swaggerDocument = SwaggerModule.createDocument(app, createSwaggerConfig());
     SwaggerModule.setup('docs', app, swaggerDocument);
 
     const allowedOrigins = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS ?? '');

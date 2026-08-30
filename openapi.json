@@ -1,0 +1,3179 @@
+{
+    "openapi": "3.0.0",
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "description": "Creates a User and returns a ready-to-use accessToken, same shape as Login.",
+                "operationId": "AuthController_register",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Account created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthTokenResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "validation": {
+                                        "summary": "Validation error",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "Email must be an email; Password must be longer than or equal to 8 characters; Name must be a string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email already registered.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "CONFLICT",
+                                        "message": "A user with this email already exists"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many registration attempts from this client.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "TOO_MANY_REQUESTS",
+                                        "message": "Too many requests. Please try again later."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Register a new account",
+                "tags": ["Auth"]
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "AuthController_login",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Credentials valid.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthTokenResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Email not registered, no password set, or wrong password.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid email or password"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many login attempts from this client.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "TOO_MANY_REQUESTS",
+                                        "message": "Too many requests. Please try again later."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Log in with email and password",
+                "tags": ["Auth"]
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "operationId": "AuthController_refresh",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "A restored session, or null.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthTokenResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Restore a session from the secure refresh cookie",
+                "tags": ["Auth"]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "operationId": "AuthController_logout",
+                "parameters": [],
+                "responses": {
+                    "204": {
+                        "description": "Session revoked."
+                    }
+                },
+                "summary": "Revoke the refresh session and clear its cookie",
+                "tags": ["Auth"]
+            }
+        },
+        "/auth/password": {
+            "patch": {
+                "description": "Requires the current password even though the caller is already authenticated via JWT -- a leaked/stolen token alone shouldn't be enough to lock the real account owner out.",
+                "operationId": "AuthController_changePassword",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Password changed."
+                    },
+                    "400": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "New password must be longer than or equal to 8 characters"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token, or currentPassword is wrong.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "unauthorized": {
+                                        "summary": "Missing/invalid token",
+                                        "value": {
+                                            "error": {
+                                                "code": "UNAUTHORIZED",
+                                                "message": "Invalid or expired token"
+                                            }
+                                        }
+                                    },
+                                    "wrongPassword": {
+                                        "summary": "currentPassword is wrong",
+                                        "value": {
+                                            "error": {
+                                                "code": "UNAUTHORIZED",
+                                                "message": "Current password is incorrect"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Change the caller's own password",
+                "tags": ["Auth"]
+            }
+        },
+        "/users/lookup": {
+            "get": {
+                "description": "Requires at least 3 characters and returns at most 10 users. Names support partial matching; email and phone require exact matches. Contact details are returned only when they exactly match the query.",
+                "operationId": "UsersController_lookup",
+                "parameters": [
+                    {
+                        "name": "query",
+                        "required": true,
+                        "in": "query",
+                        "schema": {
+                            "minLength": 3,
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users matching the search.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "The query parameter is missing or shorter than 3 characters.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "query must be at least 3 characters long"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Search registered users by name or exact contact details",
+                "tags": ["Users"]
+            }
+        },
+        "/users/batch": {
+            "post": {
+                "description": "Used to resolve a group's memberIds or an expense split's userIds to names/avatars. Unknown ids are silently omitted, not an error.",
+                "operationId": "UsersController_findManyByIds",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BatchLookupUsersDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Users matching the given ids (order not guaranteed).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ids was empty or not an array of strings.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "Ids must contain at least 1 elements"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Resolve multiple user ids to display-ready profiles",
+                "tags": ["Users"]
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "operationId": "UsersController_findOne",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "User does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Get a user by id",
+                "tags": ["Users"]
+            },
+            "patch": {
+                "description": "Partial update -- send only the fields you want to change. Self only.",
+                "operationId": "UsersController_update",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "Email must be an email"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "id does not match the caller.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You can only modify your own account"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "User does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The new email/phone is already used by another user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "CONFLICT",
+                                        "message": "A user with this email already exists"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Update the caller's own account",
+                "tags": ["Users"]
+            },
+            "delete": {
+                "description": "Self only.",
+                "operationId": "UsersController_remove",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted."
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "id does not match the caller.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You can only modify your own account"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "User does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The user is referenced by an existing group or expense.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "CONFLICT",
+                                        "message": "Cannot delete a user referenced by an existing group or expense"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Delete the caller's own account",
+                "tags": ["Users"]
+            }
+        },
+        "/groups": {
+            "post": {
+                "description": "The caller is always added to memberIds even if they omit themselves.",
+                "operationId": "GroupsController_create",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateGroupDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Group created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error, or a memberId does not reference an existing user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "validation": {
+                                        "summary": "Validation error",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "MemberIds must contain at least 1 elements"
+                                            }
+                                        }
+                                    },
+                                    "unknownMember": {
+                                        "summary": "Unknown memberId",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "One or more memberIds do not reference an existing user"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Create a group",
+                "tags": ["Groups"]
+            },
+            "get": {
+                "description": "Only returns groups the caller is currently a member of.",
+                "operationId": "GroupsController_findAll",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The groups.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/GroupResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "List the caller's groups",
+                "tags": ["Groups"]
+            }
+        },
+        "/groups/summaries": {
+            "get": {
+                "operationId": "GroupsController_findAllSummaries",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The group summaries.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/GroupSummaryResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "List the caller's groups with current balance and latest activity",
+                "tags": ["Groups"]
+            }
+        },
+        "/groups/{id}": {
+            "get": {
+                "operationId": "GroupsController_findOne",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Get a group by id",
+                "tags": ["Groups"]
+            },
+            "patch": {
+                "description": "Partial update. memberIds, when sent, fully replaces the current membership -- it is not a delta of individual adds/removes.",
+                "operationId": "GroupsController_update",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateGroupDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "A memberId does not reference an existing user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "One or more memberIds do not reference an existing user"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "memberIds omits one or more current members who still have an unsettled balance (including a member removing themselves) -- they must be settled up before leaving or being removed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "CONFLICT",
+                                        "message": "Cannot remove member(s) with an unsettled balance: user-1"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Rename a group and/or replace its membership",
+                "tags": ["Groups"]
+            },
+            "delete": {
+                "description": "Cascades: deletes the group's memberships, expenses, expense splits, and payments. Every member must have a zero balance first.",
+                "operationId": "GroupsController_remove",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted."
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "One or more members still have an unsettled balance.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "CONFLICT",
+                                        "message": "Cannot delete a group with unsettled balances -- everyone must be settled up first"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Delete a group",
+                "tags": ["Groups"]
+            }
+        },
+        "/groups/{groupId}/balances": {
+            "get": {
+                "description": "settlements is the Simplify Debt-minimized transaction list -- the fewest payments needed to bring every member to zero, not a raw pairwise ledger.",
+                "operationId": "BalancesController_getGroupBalances",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Balances and settlements.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GroupBalancesResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Get net balances and a minimal settlement plan for a group",
+                "tags": ["Balances"]
+            }
+        },
+        "/groups/{groupId}/expenses": {
+            "post": {
+                "description": "The server independently recomputes the expected split from amount + splitType and rejects the write (400) if it does not reconcile with the submitted splits -- the client's numbers are never trusted blindly.",
+                "operationId": "ExpensesController_create",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateExpenseDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Expense created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error, submitted splits do not reconcile, or a participant is not an active group member.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "validation": {
+                                        "summary": "Validation error",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "Description must be shorter than or equal to 500 characters"
+                                            }
+                                        }
+                                    },
+                                    "equalSplitMismatch": {
+                                        "summary": "equal split does not reconcile",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "submitted splits do not reconcile with the server-computed split"
+                                            }
+                                        }
+                                    },
+                                    "exactSumMismatch": {
+                                        "summary": "exact split does not sum to amount",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "splits do not sum to the expense amount for an exact split"
+                                            }
+                                        }
+                                    },
+                                    "percentagesMissing": {
+                                        "summary": "percentages missing for percentage split",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "percentages is required for a percentage split"
+                                            }
+                                        }
+                                    },
+                                    "percentagesSum": {
+                                        "summary": "percentages do not sum to 100",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "percentages must sum to 100"
+                                            }
+                                        }
+                                    },
+                                    "sharesMissing": {
+                                        "summary": "shares missing for shares split",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "shares is required for a shares split"
+                                            }
+                                        }
+                                    },
+                                    "unknownUser": {
+                                        "summary": "Participant is not an active group member",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "All participants must be active group members; invalid userId(s): user-3"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Record an expense",
+                "tags": ["Expenses"]
+            },
+            "get": {
+                "operationId": "ExpensesController_findAllByGroup",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The expenses.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ExpenseResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "List all expenses in a group",
+                "tags": ["Expenses"]
+            }
+        },
+        "/groups/{groupId}/expenses/{id}": {
+            "get": {
+                "description": "Scoped to the group in the URL -- an expense that exists but belongs to a different group also 404s here.",
+                "operationId": "ExpensesController_findOne",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The expense.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id, or no expense with that id in this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "groupNotFound": {
+                                        "summary": "Group not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Group does-not-exist not found"
+                                            }
+                                        }
+                                    },
+                                    "expenseNotFound": {
+                                        "summary": "Expense not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Expense does-not-exist not found in group group-daaru-party"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Get an expense by id",
+                "tags": ["Expenses"]
+            },
+            "patch": {
+                "description": "Full replacement, not a partial patch -- resend every field. Validated exactly like create, same reconciliation rules apply.",
+                "operationId": "ExpensesController_update",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateExpenseDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated expense.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExpenseResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error, or submitted splits do not reconcile.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "submitted splits do not reconcile with the server-computed split"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id, or no expense with that id in this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "groupNotFound": {
+                                        "summary": "Group not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Group does-not-exist not found"
+                                            }
+                                        }
+                                    },
+                                    "expenseNotFound": {
+                                        "summary": "Expense not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Expense does-not-exist not found in group group-daaru-party"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Replace an expense",
+                "tags": ["Expenses"]
+            },
+            "delete": {
+                "description": "Cascades to the expense's own splits.",
+                "operationId": "ExpensesController_remove",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted."
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id, or no expense with that id in this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "groupNotFound": {
+                                        "summary": "Group not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Group does-not-exist not found"
+                                            }
+                                        }
+                                    },
+                                    "expenseNotFound": {
+                                        "summary": "Expense not found",
+                                        "value": {
+                                            "error": {
+                                                "code": "NOT_FOUND",
+                                                "message": "Expense does-not-exist not found in group group-daaru-party"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Delete an expense",
+                "tags": ["Expenses"]
+            }
+        },
+        "/groups/{groupId}/payments": {
+            "post": {
+                "operationId": "PaymentsController_create",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreatePaymentDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment recorded.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error, fromUserId equals toUserId, or a participant is not an active group member.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "examples": {
+                                    "sameUser": {
+                                        "summary": "fromUserId equals toUserId",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "fromUserId and toUserId must be different"
+                                            }
+                                        }
+                                    },
+                                    "unknownUser": {
+                                        "summary": "Participant is not an active group member",
+                                        "value": {
+                                            "error": {
+                                                "code": "VALIDATION_ERROR",
+                                                "message": "All participants must be active group members; invalid userId(s): user-3"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Record a payment settling debt within a group",
+                "tags": ["Payments"]
+            },
+            "get": {
+                "operationId": "PaymentsController_findAllByGroup",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The payments.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PaymentResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "List all payments in a group",
+                "tags": ["Payments"]
+            }
+        },
+        "/groups/{groupId}/payments/{id}": {
+            "patch": {
+                "description": "Full replacement, not a partial patch -- resend payer, recipient, and amount.",
+                "operationId": "PaymentsController_update",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePaymentDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated payment.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error, identical payer and recipient, or an unknown user.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.\n\nNo group with that id, or no payment with that id in this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Replace a payment",
+                "tags": ["Payments"]
+            },
+            "delete": {
+                "operationId": "PaymentsController_remove",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted."
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The caller is not a member of this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "FORBIDDEN",
+                                        "message": "You are not a member of this group"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No group with that id.\n\nNo group with that id, or no payment with that id in this group.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "Group does-not-exist not found"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Delete a payment",
+                "tags": ["Payments"]
+            }
+        },
+        "/dashboard": {
+            "get": {
+                "operationId": "DashboardController_getDashboard",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "required": false,
+                        "in": "query",
+                        "description": "Inclusive ISO-8601 start instant.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "required": false,
+                        "in": "query",
+                        "description": "Exclusive ISO-8601 end instant.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dashboard spending summary.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "Get aggregate spending insights for the signed-in user",
+                "tags": ["Dashboard"]
+            }
+        },
+        "/users/me/friends": {
+            "get": {
+                "description": "Derived, not stored: active members of groups the caller currently belongs to, deduplicated across shared groups.",
+                "operationId": "FriendsController_findFriends",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The friend list (may be empty).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/FriendResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseDto"
+                                },
+                                "example": {
+                                    "error": {
+                                        "code": "UNAUTHORIZED",
+                                        "message": "Invalid or expired token"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access-token": []
+                    }
+                ],
+                "summary": "List the caller's friends",
+                "tags": ["Friends"]
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Always public. Returns 200 only when the API can query its database.",
+                "operationId": "HealthController_check",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Service is up.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "example": {
+                                        "status": "ok",
+                                        "checks": {
+                                            "database": "up"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A required dependency is unavailable."
+                    }
+                },
+                "summary": "Database health check",
+                "tags": ["Health"]
+            }
+        },
+        "/readiness": {
+            "get": {
+                "description": "Always public. Confirms that the API process can handle requests without querying external dependencies.",
+                "operationId": "HealthController_readiness",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "API process is responsive.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "example": {
+                                        "status": "ok",
+                                        "checks": {
+                                            "system": "up"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "System readiness check",
+                "tags": ["Health"]
+            }
+        }
+    },
+    "info": {
+        "title": "Expense Splitter API",
+        "description": "REST API for the Expense Splitter application",
+        "version": "0.0.1",
+        "contact": {}
+    },
+    "tags": [],
+    "servers": [],
+    "components": {
+        "securitySchemes": {
+            "access-token": {
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "type": "http"
+            }
+        },
+        "schemas": {
+            "RegisterDto": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "minLength": 10,
+                        "maxLength": 10,
+                        "pattern": "^[6-9]\\d{9}$"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 200
+                    }
+                },
+                "required": ["name", "email", "phone", "password"]
+            },
+            "AuthUserResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "avatarUrl": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": ["id", "name", "email", "phone", "avatarUrl"]
+            },
+            "AuthTokenResponseDto": {
+                "type": "object",
+                "properties": {
+                    "user": {
+                        "$ref": "#/components/schemas/AuthUserResponseDto"
+                    },
+                    "accessToken": {
+                        "type": "string"
+                    }
+                },
+                "required": ["user", "accessToken"]
+            },
+            "ErrorDetailDto": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "VALIDATION_ERROR",
+                        "enum": [
+                            "VALIDATION_ERROR",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "TOO_MANY_REQUESTS",
+                            "SERVICE_UNAVAILABLE",
+                            "ERROR"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "A human-readable description of what went wrong"
+                    }
+                },
+                "required": ["code", "message"]
+            },
+            "ErrorResponseDto": {
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "$ref": "#/components/schemas/ErrorDetailDto"
+                    }
+                },
+                "required": ["error"]
+            },
+            "LoginDto": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": ["email", "password"]
+            },
+            "ChangePasswordDto": {
+                "type": "object",
+                "properties": {
+                    "currentPassword": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "newPassword": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 200
+                    }
+                },
+                "required": ["currentPassword", "newPassword"]
+            },
+            "UserResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "avatarUrl": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": ["id", "name", "email", "phone", "avatarUrl"]
+            },
+            "BatchLookupUsersDto": {
+                "type": "object",
+                "properties": {
+                    "ids": {
+                        "minItems": 1,
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["ids"]
+            },
+            "UpdateUserDto": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 30
+                    },
+                    "avatarUrl": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                }
+            },
+            "CreateGroupDto": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "memberIds": {
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["name", "memberIds"]
+            },
+            "GroupResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "memberIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": ["id", "name", "memberIds", "createdAt"]
+            },
+            "GroupSummaryResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "memberIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "memberCount": {
+                        "type": "number"
+                    },
+                    "currentUserBalance": {
+                        "type": "number"
+                    },
+                    "hasFinancialActivity": {
+                        "type": "boolean"
+                    },
+                    "lastActivityAt": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "memberIds",
+                    "memberCount",
+                    "currentUserBalance",
+                    "hasFinancialActivity",
+                    "lastActivityAt",
+                    "createdAt"
+                ]
+            },
+            "UpdateGroupDto": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "memberIds": {
+                        "uniqueItems": true,
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "NetBalanceDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string"
+                    },
+                    "balance": {
+                        "type": "number"
+                    }
+                },
+                "required": ["userId", "balance"]
+            },
+            "SettlementTransactionDto": {
+                "type": "object",
+                "properties": {
+                    "fromUserId": {
+                        "type": "string"
+                    },
+                    "toUserId": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "number"
+                    }
+                },
+                "required": ["fromUserId", "toUserId", "amount"]
+            },
+            "GroupBalancesResponseDto": {
+                "type": "object",
+                "properties": {
+                    "balances": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NetBalanceDto"
+                        }
+                    },
+                    "settlements": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SettlementTransactionDto"
+                        }
+                    }
+                },
+                "required": ["balances", "settlements"]
+            },
+            "SplitDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "amount": {
+                        "type": "number"
+                    }
+                },
+                "required": ["userId", "amount"]
+            },
+            "PercentageInputDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "percentage": {
+                        "type": "number",
+                        "minimum": 1
+                    }
+                },
+                "required": ["userId", "percentage"]
+            },
+            "ShareInputDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "shares": {
+                        "type": "number",
+                        "minimum": 1
+                    }
+                },
+                "required": ["userId", "shares"]
+            },
+            "CreateExpenseDto": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "amount": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    },
+                    "paidByUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "splitType": {
+                        "type": "string",
+                        "enum": ["equal", "exact", "percentage", "shares"]
+                    },
+                    "splits": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SplitDto"
+                        }
+                    },
+                    "percentages": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PercentageInputDto"
+                        }
+                    },
+                    "shares": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareInputDto"
+                        }
+                    }
+                },
+                "required": ["description", "amount", "paidByUserId", "splitType", "splits"]
+            },
+            "ExpenseSplitResponseDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "number"
+                    }
+                },
+                "required": ["userId", "amount"]
+            },
+            "ExpenseResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "groupId": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "number"
+                    },
+                    "paidByUserId": {
+                        "type": "string"
+                    },
+                    "createdByUserId": {
+                        "type": "string"
+                    },
+                    "splitType": {
+                        "enum": ["equal", "exact", "percentage", "shares"],
+                        "type": "string"
+                    },
+                    "splits": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ExpenseSplitResponseDto"
+                        }
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "groupId",
+                    "description",
+                    "amount",
+                    "paidByUserId",
+                    "createdByUserId",
+                    "splitType",
+                    "splits",
+                    "paidOn",
+                    "createdAt"
+                ]
+            },
+            "UpdateExpenseDto": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "amount": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    },
+                    "paidByUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "splitType": {
+                        "enum": ["equal", "exact", "percentage", "shares"],
+                        "type": "string"
+                    },
+                    "splits": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SplitDto"
+                        }
+                    },
+                    "percentages": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PercentageInputDto"
+                        }
+                    },
+                    "shares": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShareInputDto"
+                        }
+                    }
+                },
+                "required": ["description", "amount", "paidByUserId", "splitType", "splits"]
+            },
+            "CreatePaymentDto": {
+                "type": "object",
+                "properties": {
+                    "fromUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "toUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "amount": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    }
+                },
+                "required": ["fromUserId", "toUserId", "amount"]
+            },
+            "PaymentResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "groupId": {
+                        "type": "string"
+                    },
+                    "fromUserId": {
+                        "type": "string"
+                    },
+                    "toUserId": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "number"
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "groupId",
+                    "fromUserId",
+                    "toUserId",
+                    "amount",
+                    "paidOn",
+                    "createdAt"
+                ]
+            },
+            "UpdatePaymentDto": {
+                "type": "object",
+                "properties": {
+                    "fromUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "toUserId": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "amount": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "paidOn": {
+                        "type": "string"
+                    }
+                },
+                "required": ["fromUserId", "toUserId", "amount"]
+            },
+            "DashboardMemberShareDto": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string",
+                        "example": "user-id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Utkarsh"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 1250.5
+                    },
+                    "isCurrentUser": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "required": ["userId", "name", "amount", "isCurrentUser"]
+            },
+            "DashboardMonthlySpendDto": {
+                "type": "object",
+                "properties": {
+                    "month": {
+                        "type": "string",
+                        "example": "2026-08"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 4800
+                    },
+                    "actualPaid": {
+                        "type": "number",
+                        "example": 3200
+                    },
+                    "currentUserShare": {
+                        "type": "number",
+                        "example": 1600
+                    }
+                },
+                "required": ["month", "amount", "actualPaid", "currentUserShare"]
+            },
+            "DashboardDailySpendDto": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "example": "2026-08-17"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 4800
+                    },
+                    "actualPaid": {
+                        "type": "number",
+                        "example": 3200
+                    },
+                    "currentUserShare": {
+                        "type": "number",
+                        "example": 1600
+                    }
+                },
+                "required": ["date", "amount", "actualPaid", "currentUserShare"]
+            },
+            "DashboardGroupSpendDto": {
+                "type": "object",
+                "properties": {
+                    "groupId": {
+                        "type": "string",
+                        "example": "group-id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Goa trip"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 4800
+                    },
+                    "actualPaid": {
+                        "type": "number",
+                        "example": 3200
+                    },
+                    "currentUserShare": {
+                        "type": "number",
+                        "example": 1600
+                    },
+                    "currentBalance": {
+                        "type": "number",
+                        "example": 250,
+                        "description": "Settlement-aware balance; positive means owed."
+                    },
+                    "memberShares": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardMemberShareDto"
+                        }
+                    },
+                    "spendingByMonth": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardMonthlySpendDto"
+                        }
+                    },
+                    "spendingByDay": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardDailySpendDto"
+                        }
+                    }
+                },
+                "required": [
+                    "groupId",
+                    "name",
+                    "amount",
+                    "actualPaid",
+                    "currentUserShare",
+                    "currentBalance",
+                    "memberShares",
+                    "spendingByMonth",
+                    "spendingByDay"
+                ]
+            },
+            "DashboardResponseDto": {
+                "type": "object",
+                "properties": {
+                    "actualPaid": {
+                        "type": "number",
+                        "example": 5200
+                    },
+                    "currentUserShare": {
+                        "type": "number",
+                        "example": 1850.5
+                    },
+                    "groupSpend": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DashboardGroupSpendDto"
+                        }
+                    }
+                },
+                "required": ["actualPaid", "currentUserShare", "groupSpend"]
+            },
+            "FriendGroupBalanceDto": {
+                "type": "object",
+                "properties": {
+                    "groupId": {
+                        "type": "string"
+                    },
+                    "groupName": {
+                        "type": "string"
+                    },
+                    "balance": {
+                        "type": "number"
+                    }
+                },
+                "required": ["groupId", "groupName", "balance"]
+            },
+            "FriendResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "avatarUrl": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "sharedGroupCount": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "netBalance": {
+                        "type": "number"
+                    },
+                    "groupBalances": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FriendGroupBalanceDto"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "phone",
+                    "avatarUrl",
+                    "sharedGroupCount",
+                    "netBalance",
+                    "groupBalances"
+                ]
+            }
+        }
+    }
+}
