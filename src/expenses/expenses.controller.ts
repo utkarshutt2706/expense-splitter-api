@@ -58,8 +58,8 @@ export class ExpensesController {
     @ApiResponse({
         status: 400,
         description:
-            'Validation error, submitted splits do not reconcile, or a userId does not reference ' +
-            'an existing user.',
+            'Validation error, submitted splits do not reconcile, or a participant is not an ' +
+            'active group member.',
         type: ErrorResponseDto,
         examples: {
             validation: {
@@ -99,10 +99,10 @@ export class ExpensesController {
                 value: errorExample('VALIDATION_ERROR', 'shares is required for a shares split'),
             },
             unknownUser: {
-                summary: 'paidByUserId/split userId unknown',
+                summary: 'Participant is not an active group member',
                 value: errorExample(
                     'VALIDATION_ERROR',
-                    'paidByUserId or a split userId does not reference an existing user',
+                    'All participants must be active group members; invalid userId(s): user-3',
                 ),
             },
         },

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Payment, Prisma } from '@prisma/client';
+import { assertActiveGroupParticipants } from '../common/group-participants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
@@ -10,7 +11,7 @@ export class PaymentsService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(groupId: string, dto: CreatePaymentDto): Promise<PaymentResponseDto> {
-        await this.ensureGroupExists(groupId);
+        await assertActiveGroupParticipants(this.prisma, groupId, [dto.fromUserId, dto.toUserId]);
 
         this.validateParticipants(dto);
         const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
@@ -43,6 +44,7 @@ export class PaymentsService {
 
     async update(groupId: string, id: string, dto: UpdatePaymentDto): Promise<PaymentResponseDto> {
         await this.ensurePaymentExists(groupId, id);
+        await assertActiveGroupParticipants(this.prisma, groupId, [dto.fromUserId, dto.toUserId]);
         this.validateParticipants(dto);
         const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 

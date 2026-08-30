@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Expense, ExpenseSplit, Prisma, SplitType } from '@prisma/client';
+import { assertActiveGroupParticipants } from '../common/group-participants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
@@ -27,7 +28,7 @@ export class ExpensesService {
         dto: CreateExpenseDto,
         createdByUserId = dto.paidByUserId,
     ): Promise<ExpenseResponseDto> {
-        await this.ensureGroupExists(groupId);
+        await assertActiveGroupParticipants(this.prisma, groupId, this.participantUserIds(dto));
 
         const submitted: Split[] = dto.splits;
         this.validateSplits(dto);
@@ -82,6 +83,7 @@ export class ExpensesService {
 
     async update(groupId: string, id: string, dto: UpdateExpenseDto): Promise<ExpenseResponseDto> {
         await this.findOne(groupId, id);
+        await assertActiveGroupParticipants(this.prisma, groupId, this.participantUserIds(dto));
         this.validateSplits(dto);
         const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
@@ -139,6 +141,15 @@ export class ExpensesService {
                 'submitted splits do not reconcile with the server-computed split',
             );
         }
+    }
+
+    private participantUserIds(dto: CreateExpenseDto): string[] {
+        return [
+            dto.paidByUserId,
+            ...dto.splits.map((split) => split.userId),
+            ...(dto.percentages?.map((entry) => entry.userId) ?? []),
+            ...(dto.shares?.map((entry) => entry.userId) ?? []),
+        ];
     }
 
     private computeExpectedSplits(dto: CreateExpenseDto): Split[] {
