@@ -70,37 +70,100 @@ describe('UsersService', () => {
             await expect(service.lookup({ query: '   ' })).rejects.toThrow(BadRequestException);
         });
 
-        it('finds users by fuzzy match across name, email and phone', async () => {
-            prisma.user.findMany.mockResolvedValue([user]);
+        it('throws BadRequestException when query is shorter than three characters', async () => {
+            await expect(service.lookup({ query: 'ab' })).rejects.toThrow(BadRequestException);
+            expect(prisma.user.findMany).not.toHaveBeenCalled();
+        });
 
-            await expect(service.lookup({ query: 'utkar' })).resolves.toEqual([user]);
+        it('limits partial name matches without selecting contact details', async () => {
+            const lookupUser = { id: user.id, name: user.name, avatarUrl: user.avatarUrl };
+            prisma.user.findMany.mockResolvedValue([lookupUser]);
+
+            await expect(service.lookup({ query: 'utkar' })).resolves.toEqual([lookupUser]);
             expect(prisma.user.findMany).toHaveBeenCalledWith({
-                where: {
-                    OR: [
-                        { name: { contains: 'utkar', mode: 'insensitive' } },
-                        { email: { contains: 'utkar', mode: 'insensitive' } },
-                        { phone: { contains: 'utkar', mode: 'insensitive' } },
-                    ],
+                where: { name: { contains: 'utkar', mode: 'insensitive' } },
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                    email: false,
+                    phone: false,
                 },
-                omit: { passwordHash: true },
                 orderBy: { name: 'asc' },
+                take: 10,
             });
         });
 
         it('trims whitespace before matching user records', async () => {
+            prisma.user.findMany.mockResolvedValue([]);
+
+            await expect(service.lookup({ query: '  utkar  ' })).resolves.toEqual([]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: { name: { contains: 'utkar', mode: 'insensitive' } },
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                    email: false,
+                    phone: false,
+                },
+                orderBy: { name: 'asc' },
+                take: 10,
+            });
+        });
+
+        it('requires an exact email match and returns only the matched email', async () => {
             prisma.user.findMany.mockResolvedValue([user]);
 
-            await expect(service.lookup({ query: '  utkar  ' })).resolves.toEqual([user]);
+            await expect(service.lookup({ query: 'utkarsh@example.com' })).resolves.toEqual([user]);
             expect(prisma.user.findMany).toHaveBeenCalledWith({
-                where: {
-                    OR: [
-                        { name: { contains: 'utkar', mode: 'insensitive' } },
-                        { email: { contains: 'utkar', mode: 'insensitive' } },
-                        { phone: { contains: 'utkar', mode: 'insensitive' } },
-                    ],
+                where: { email: { equals: 'utkarsh@example.com', mode: 'insensitive' } },
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                    email: true,
+                    phone: false,
                 },
-                omit: { passwordHash: true },
                 orderBy: { name: 'asc' },
+                take: 10,
+            });
+        });
+
+        it('requires an exact phone match and returns only the matched phone', async () => {
+            prisma.user.findMany.mockResolvedValue([user]);
+
+            await expect(service.lookup({ query: '9876543210' })).resolves.toEqual([user]);
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: { phone: { equals: '9876543210' } },
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                    email: false,
+                    phone: true,
+                },
+                orderBy: { name: 'asc' },
+                take: 10,
+            });
+        });
+
+        it('treats partial email text as a name search', async () => {
+            prisma.user.findMany.mockResolvedValue([]);
+
+            await service.lookup({ query: 'example.com' });
+
+            expect(prisma.user.findMany).toHaveBeenCalledWith({
+                where: { name: { contains: 'example.com', mode: 'insensitive' } },
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                    email: false,
+                    phone: false,
+                },
+                orderBy: { name: 'asc' },
+                take: 10,
             });
         });
 

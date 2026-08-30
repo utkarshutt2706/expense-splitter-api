@@ -20,7 +20,7 @@ import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { PublicUser, UsersService } from './users.service';
+import { PublicUser, UserLookupResult, UsersService } from './users.service';
 
 @ApiBearerAuth('access-token')
 @Controller('users')
@@ -29,9 +29,11 @@ export class UsersController {
 
     @Get('lookup')
     @ApiOperation({
-        summary: 'Search registered users by name, email or phone',
+        summary: 'Search registered users by name or exact contact details',
         description:
-            'Returns matching users whose name, email or phone contains the supplied query string.',
+            'Requires at least 3 characters and returns at most 10 users. Names support partial ' +
+            'matching; email and phone require exact matches. Contact details are returned only ' +
+            'when they exactly match the query.',
     })
     @ApiResponse({
         status: 200,
@@ -40,9 +42,9 @@ export class UsersController {
     })
     @ApiResponse({
         status: 400,
-        description: 'The query parameter is missing or empty.',
+        description: 'The query parameter is missing or shorter than 3 characters.',
         type: ErrorResponseDto,
-        example: errorExample('VALIDATION_ERROR', 'query is required'),
+        example: errorExample('VALIDATION_ERROR', 'query must be at least 3 characters long'),
     })
     @ApiResponse({
         status: 401,
@@ -50,7 +52,7 @@ export class UsersController {
         type: ErrorResponseDto,
         example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
     })
-    lookup(@Query() dto: LookupUserDto): Promise<PublicUser[]> {
+    lookup(@Query() dto: LookupUserDto): Promise<UserLookupResult[]> {
         return this.usersService.lookup(dto);
     }
 

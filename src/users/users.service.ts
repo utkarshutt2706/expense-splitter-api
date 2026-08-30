@@ -7,10 +7,14 @@ import {
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
-import { LookupUserDto } from './dto/lookup-user.dto';
+import { LookupUserDto, MIN_USER_LOOKUP_LENGTH } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 export type PublicUser = Omit<User, 'passwordHash'>;
+export type UserLookupResult = Pick<User, 'id' | 'name' | 'avatarUrl'> &
+    Partial<Pick<User, 'email' | 'phone'>>;
+
+const USER_LOOKUP_LIMIT = 10;
 @Injectable()
 export class UsersService {
     constructor(private readonly prisma: PrismaService) {}
@@ -26,23 +30,35 @@ export class UsersService {
         return user;
     }
 
-    async lookup(dto: LookupUserDto): Promise<PublicUser[]> {
+    async lookup(dto: LookupUserDto): Promise<UserLookupResult[]> {
         const search = dto.query?.trim();
 
-        if (!search) {
-            throw new BadRequestException('query is required');
+        if (!search || search.length < MIN_USER_LOOKUP_LENGTH) {
+            throw new BadRequestException(
+                `query must be at least ${MIN_USER_LOOKUP_LENGTH} characters long`,
+            );
         }
 
+        const isEmailLookup = search.includes('@');
+        const isPhoneLookup = /^\+?\d+$/.test(search);
+
+        const where: Prisma.UserWhereInput = isEmailLookup
+            ? { email: { equals: search, mode: 'insensitive' } }
+            : isPhoneLookup
+              ? { phone: { equals: search } }
+              : { name: { contains: search, mode: 'insensitive' } };
+
         return this.prisma.user.findMany({
-            where: {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { email: { contains: search, mode: 'insensitive' } },
-                    { phone: { contains: search, mode: 'insensitive' } },
-                ],
+            where,
+            select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+                email: isEmailLookup,
+                phone: isPhoneLookup,
             },
-            omit: { passwordHash: true },
             orderBy: { name: 'asc' },
+            take: USER_LOOKUP_LIMIT,
         });
     }
 
