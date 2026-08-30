@@ -7,6 +7,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { logHttpFailure } from '../http-error-logging';
 import { CONTROLLER_ERROR_LOGGED } from '../interceptors/controller-error-logging.interceptor';
 
 const STATUS_TO_CODE: Partial<Record<number, string>> = {
@@ -64,7 +65,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
             return;
         }
 
-        this.logger.error(
+        logHttpFailure(
+            this.logger,
+            status,
             `Request failed | ${request.method} ${this.getRoutePath(request)} | ` +
                 `status=${status} | user=${request.user?.sub ?? 'anonymous'} | ${message}`,
             stack,

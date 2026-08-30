@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Observable, catchError, throwError } from 'rxjs';
+import { logHttpFailure } from '../http-error-logging';
 
 type AuthenticatedRequest = Request & {
     user?: { sub?: string };
@@ -32,7 +33,6 @@ export class ControllerErrorLoggingInterceptor implements NestInterceptor {
 
         return next.handle().pipe(
             catchError((error: unknown) => {
-                request[CONTROLLER_ERROR_LOGGED] = true;
                 const status = error instanceof HttpException ? error.getStatus() : 500;
                 const message = [
                     'Controller request failed',
@@ -43,7 +43,12 @@ export class ControllerErrorLoggingInterceptor implements NestInterceptor {
                     `user=${userId}`,
                 ].join(' | ');
 
-                this.logger.error(message, error instanceof Error ? error.stack : String(error));
+                request[CONTROLLER_ERROR_LOGGED] = logHttpFailure(
+                    this.logger,
+                    status,
+                    message,
+                    error instanceof Error ? error.stack : String(error),
+                );
 
                 return throwError(() => error);
             }),

@@ -5,6 +5,7 @@ import {
     ForbiddenException,
     HttpException,
     HttpStatus,
+    Logger,
     NotFoundException,
     ServiceUnavailableException,
     UnauthorizedException,
@@ -18,6 +19,8 @@ type MockResponse = {
 
 describe('HttpExceptionFilter', () => {
     let filter: HttpExceptionFilter;
+    let logError: jest.SpyInstance;
+    let logWarning: jest.SpyInstance;
 
     function mockHost(res: MockResponse): ArgumentsHost {
         return {
@@ -41,7 +44,8 @@ describe('HttpExceptionFilter', () => {
 
     beforeEach(() => {
         filter = new HttpExceptionFilter();
-        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        logWarning = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     });
 
     afterEach(() => {
@@ -57,6 +61,8 @@ describe('HttpExceptionFilter', () => {
         expect(res.json).toHaveBeenCalledWith({
             error: { code: 'NOT_FOUND', message: 'User user-1 not found' },
         });
+        expect(logError).not.toHaveBeenCalled();
+        expect(logWarning).not.toHaveBeenCalled();
     });
 
     it('maps ConflictException to a CONFLICT error', () => {
@@ -84,6 +90,11 @@ describe('HttpExceptionFilter', () => {
                 message: 'Database health check failed',
             },
         });
+        expect(logError).toHaveBeenCalledWith(
+            'Request failed | GET /test | status=503 | user=anonymous | database health check failed',
+            expect.any(String),
+        );
+        expect(logWarning).not.toHaveBeenCalled();
     });
 
     it('maps UnauthorizedException to an UNAUTHORIZED error', () => {
@@ -94,6 +105,10 @@ describe('HttpExceptionFilter', () => {
         expect(res.json).toHaveBeenCalledWith({
             error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' },
         });
+        expect(logWarning).toHaveBeenCalledWith(
+            'Request failed | GET /test | status=401 | user=anonymous | invalid or missing API key',
+        );
+        expect(logError).not.toHaveBeenCalled();
     });
 
     it('maps ForbiddenException to a FORBIDDEN error', () => {
@@ -180,5 +195,9 @@ describe('HttpExceptionFilter', () => {
         expect(res.json).toHaveBeenCalledWith({
             error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
         });
+        expect(logError).toHaveBeenCalledWith(
+            'Request failed | GET /test | status=500 | user=anonymous | Unexpected error',
+            expect.any(String),
+        );
     });
 });
