@@ -27,7 +27,7 @@
         "test:e2e": "jest --config ./test/jest-e2e.json",
         "prisma:migrate:dev": "prisma migrate dev",
         "prisma:migrate:deploy": "prisma migrate deploy",
-        "verify": "pnpm format:check && pnpm lint && pnpm build && pnpm test:cov && pnpm test:e2e"
+        "verify": "pnpm format:check && pnpm lint && pnpm build && pnpm test:cov"
     },
     "dependencies": {
         "@nestjs/common": "^11.2.1",

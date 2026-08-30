@@ -13,13 +13,19 @@ describe('Auth endpoint rate limits', () => {
         register: jest.Mock;
         login: jest.Mock;
         changePassword: jest.Mock;
+        createRefreshSession: jest.Mock;
+        refresh: jest.Mock;
+        revokeRefreshSession: jest.Mock;
     };
 
     beforeEach(async () => {
         authService = {
-            register: jest.fn().mockResolvedValue({}),
-            login: jest.fn().mockResolvedValue({}),
+            register: jest.fn().mockResolvedValue({ user: { id: 'user-1' }, accessToken: 'token' }),
+            login: jest.fn().mockResolvedValue({ user: { id: 'user-1' }, accessToken: 'token' }),
             changePassword: jest.fn(),
+            createRefreshSession: jest.fn().mockResolvedValue('refresh-token'),
+            refresh: jest.fn(),
+            revokeRefreshSession: jest.fn(),
         };
         const moduleRef = await Test.createTestingModule({
             imports: [

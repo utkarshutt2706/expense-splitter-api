@@ -21,8 +21,9 @@ function url(pathStr) {
     };
 }
 
-function req(method, pathStr, { body, description, noAuth, badToken } = {}) {
+function req(method, pathStr, { body, description, noAuth, badToken, extraHeaders = [] } = {}) {
     const headers = [{ key: 'Content-Type', value: 'application/json' }];
+    headers.push(...extraHeaders);
     const request = {
         method,
         header: headers,
@@ -242,6 +243,37 @@ const loginItem = item(
 );
 loginItem.event = [captureAccessTokenScript];
 
+const sessionHeader = [{ key: 'X-Session-Request', value: 'ExpenseSplitter' }];
+const refreshItem = item(
+    'Refresh session',
+    req('POST', '/auth/refresh', { noAuth: true, extraHeaders: sessionHeader }),
+    [
+        example(
+            '200 OK',
+            req('POST', '/auth/refresh', { noAuth: true, extraHeaders: sessionHeader }),
+            'OK',
+            200,
+            { user: USERS.current, accessToken: '{{accessToken}}' },
+        ),
+    ],
+    'Uses the seven-day HttpOnly refresh cookie issued by Register/Login to obtain a new 15-minute access token.',
+);
+refreshItem.event = [captureAccessTokenScript];
+
+const logoutItem = item(
+    'Logout',
+    req('POST', '/auth/logout', { noAuth: true, extraHeaders: sessionHeader }),
+    [
+        example(
+            '204 No Content',
+            req('POST', '/auth/logout', { noAuth: true, extraHeaders: sessionHeader }),
+            'No Content',
+            204,
+        ),
+    ],
+    'Revokes the server-side refresh session and clears its HttpOnly cookie.',
+);
+
 const changePasswordBody = {
     currentPassword: 'correct-horse-battery-staple',
     newPassword: 'a-new-secure-password',
@@ -292,11 +324,10 @@ const changePasswordItem = item(
 const authFolder = {
     name: 'Auth',
     description:
-        'Registration, login, and changing your own password. Register/Login are public and return ' +
-        '`{ user, accessToken }` -- a 7-day-lived JWT you send as `Authorization: Bearer <accessToken>` ' +
-        'on every other request. Run either request here first: both have a saved Test script that ' +
-        'copies the returned accessToken into the `accessToken` collection variable automatically.',
-    item: [registerItem, loginItem, changePasswordItem],
+        'Registration, login, refresh, logout, and changing your own password. Access tokens last ' +
+        '15 minutes; Register/Login also issue a seven-day HttpOnly refresh cookie. The saved Test ' +
+        'scripts copy returned access tokens into the collection variable automatically.',
+    item: [registerItem, loginItem, refreshItem, logoutItem, changePasswordItem],
 };
 
 // =====================================================================

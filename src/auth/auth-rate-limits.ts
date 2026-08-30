@@ -9,4 +9,9 @@ export const AUTH_RATE_LIMITS = {
         ttl: 60 * 60_000,
         blockDuration: 60 * 60_000,
     },
+    refresh: {
+        limit: 30,
+        ttl: 60_000,
+        blockDuration: 60_000,
+    },
 } as const;

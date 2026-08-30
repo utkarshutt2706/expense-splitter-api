@@ -80,13 +80,22 @@ public `/health` endpoint additionally verifies database connectivity and return
 3. Apply database migrations: `pnpm prisma:migrate:dev`
 4. Start the app: `pnpm start:dev`
 
+`pnpm verify` runs formatting, linting, compilation, and unit tests with coverage. It
+intentionally excludes E2E tests because those tests create and modify database
+records. Run `pnpm test:e2e` only with `NODE_ENV=test` and a `DATABASE_URL` whose
+database name contains `test` or `e2e`, after applying migrations to that isolated
+database. CI provisions and migrates a dedicated PostgreSQL database automatically.
+
 ## Authentication
 
 Real per-user authentication: `POST /auth/register` creates an account (name, email,
 phone, password), `POST /auth/login` validates credentials, and both return a signed
 JWT alongside the user. Every request except `/health`, `/readiness`,
-`/auth/register`, and `/auth/login` requires that token as `Authorization: Bearer <token>` — tokens are
-signed with `JWT_SECRET` and expire after 7 days, with no refresh flow yet.
+`/auth/register`, `/auth/login`, `/auth/refresh`, and `/auth/logout` requires that token
+as `Authorization: Bearer <token>`. Access tokens are signed with `JWT_SECRET`, expire after
+15 minutes, and remain in frontend memory only. A revocable, opaque refresh token is stored
+in a seven-day `HttpOnly` cookie so browser sessions survive page reloads without exposing
+long-lived credentials to JavaScript.
 
 A user created as a mere expense/split participant (via `POST /users`, e.g. adding a
 friend who isn't going to use the app themselves) has no password and can't log in —

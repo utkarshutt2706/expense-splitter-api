@@ -14,14 +14,29 @@ model User {
   avatarUrl    String?
   passwordHash String?
 
-  groupMemberships    GroupMember[]
-  expensesPaid        Expense[]         @relation("ExpensePaidBy")
-  expensesCreated     Expense[]         @relation("ExpenseCreatedBy")
-  expenseSplits       ExpenseSplit[]
-  paymentsSent        Payment[]         @relation("PaymentFrom")
-  paymentsReceived    Payment[]         @relation("PaymentTo")
+  groupMemberships GroupMember[]
+  expensesPaid     Expense[]      @relation("ExpensePaidBy")
+  expensesCreated  Expense[]      @relation("ExpenseCreatedBy")
+  expenseSplits    ExpenseSplit[]
+  paymentsSent     Payment[]      @relation("PaymentFrom")
+  paymentsReceived Payment[]      @relation("PaymentTo")
+  authSessions     AuthSession[]
 
   @@map("users")
+}
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
 }
 
 model Group {
@@ -29,9 +44,9 @@ model Group {
   name      String
   createdAt DateTime @default(now())
 
-  members     GroupMember[]
-  expenses    Expense[]
-  payments    Payment[]
+  members  GroupMember[]
+  expenses Expense[]
+  payments Payment[]
 
   @@map("groups")
 }
@@ -68,10 +83,10 @@ model Expense {
   paidOn          DateTime  @default(now())
   createdAt       DateTime  @default(now())
 
-  group  Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidBy User           @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
-  createdBy User        @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
-  splits ExpenseSplit[]
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy    User           @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
+  createdBy User           @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
+  splits    ExpenseSplit[]
 
   @@map("expenses")
 }

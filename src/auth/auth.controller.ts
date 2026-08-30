@@ -1,6 +1,19 @@
-import { Body, Controller, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    ForbiddenException,
+    Headers,
+    HttpCode,
+    HttpStatus,
+    Patch,
+    Post,
+    Req,
+    Res,
+    UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
@@ -11,6 +24,24 @@ import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import {
+    readCookie,
+    REFRESH_COOKIE_NAME,
+    REFRESH_SESSION_TTL_MS,
+    SESSION_REQUEST_HEADER,
+    SESSION_REQUEST_HEADER_VALUE,
+} from './refresh-session';
+
+const refreshCookieBaseOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? ('none' as const) : ('lax' as const),
+    path: '/auth',
+};
+const refreshCookieOptions = {
+    ...refreshCookieBaseOptions,
+    maxAge: REFRESH_SESSION_TTL_MS,
+};
 
 @Controller('auth')
 export class AuthController {
@@ -51,8 +82,14 @@ export class AuthController {
         type: ErrorResponseDto,
         example: errorExample('TOO_MANY_REQUESTS', 'Too many requests. Please try again later.'),
     })
-    register(@Body() dto: RegisterDto): Promise<AuthTokenResponseDto> {
-        return this.authService.register(dto);
+    async register(
+        @Body() dto: RegisterDto,
+        @Res({ passthrough: true }) response: Response,
+    ): Promise<AuthTokenResponseDto> {
+        const session = await this.authService.register(dto);
+        const refreshToken = await this.authService.createRefreshSession(session.user.id);
+        response.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+        return session;
     }
 
     @Public()
@@ -74,8 +111,61 @@ export class AuthController {
         type: ErrorResponseDto,
         example: errorExample('TOO_MANY_REQUESTS', 'Too many requests. Please try again later.'),
     })
-    login(@Body() dto: LoginDto): Promise<AuthTokenResponseDto> {
-        return this.authService.login(dto);
+    async login(
+        @Body() dto: LoginDto,
+        @Res({ passthrough: true }) response: Response,
+    ): Promise<AuthTokenResponseDto> {
+        const session = await this.authService.login(dto);
+        const refreshToken = await this.authService.createRefreshSession(session.user.id);
+        response.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+        return session;
+    }
+
+    @Public()
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: AUTH_RATE_LIMITS.refresh })
+    @ApiOperation({ summary: 'Restore a session from the secure refresh cookie' })
+    @ApiResponse({
+        status: 200,
+        description: 'A restored session, or null.',
+        type: AuthTokenResponseDto,
+    })
+    async refresh(
+        @Headers(SESSION_REQUEST_HEADER) sessionRequest: string | undefined,
+        @Req() request: Request,
+        @Res({ passthrough: true }) response: Response,
+    ): Promise<AuthTokenResponseDto | null> {
+        this.assertSessionRequest(sessionRequest);
+        const token = readCookie(request.headers.cookie, REFRESH_COOKIE_NAME);
+        if (!token) return null;
+
+        const session = await this.authService.refresh(token);
+        if (!session) response.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+        return session;
+    }
+
+    @Public()
+    @Post('logout')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Revoke the refresh session and clear its cookie' })
+    @ApiResponse({ status: 204, description: 'Session revoked.' })
+    async logout(
+        @Headers(SESSION_REQUEST_HEADER) sessionRequest: string | undefined,
+        @Req() request: Request,
+        @Res({ passthrough: true }) response: Response,
+    ): Promise<void> {
+        this.assertSessionRequest(sessionRequest);
+        const token = readCookie(request.headers.cookie, REFRESH_COOKIE_NAME);
+        if (token) await this.authService.revokeRefreshSession(token);
+        response.clearCookie(REFRESH_COOKIE_NAME, refreshCookieBaseOptions);
+    }
+
+    private assertSessionRequest(value: string | undefined): void {
+        if (value !== SESSION_REQUEST_HEADER_VALUE) {
+            throw new ForbiddenException('Invalid session request');
+        }
     }
 
     @Patch('password')
