@@ -27,7 +27,12 @@ describe('PaymentsService', () => {
         };
     };
 
-    const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
+    const group = {
+        id: 'group-1',
+        name: 'Daaru Party',
+        createdAt: new Date(),
+        members: [{ userId: 'user-1' }, { userId: 'user-2' }],
+    };
     const createdAt = new Date('2026-07-24T10:00:00.000Z');
 
     const payment: Prisma.Payment = {
@@ -61,6 +66,15 @@ describe('PaymentsService', () => {
             const dto = { fromUserId: 'user-1', toUserId: 'user-2', amount: 500 };
 
             await expect(service.create('missing', dto)).rejects.toThrow(NotFoundException);
+        });
+
+        it('rejects participants who are not active group members', async () => {
+            const dto = { fromUserId: 'user-1', toUserId: 'outside-user', amount: 500 };
+
+            await expect(service.create('group-1', dto)).rejects.toThrow(
+                'invalid userId(s): outside-user',
+            );
+            expect(prisma.payment.create).not.toHaveBeenCalled();
         });
 
         it('throws BadRequestException when fromUserId equals toUserId', async () => {
@@ -176,6 +190,15 @@ describe('PaymentsService', () => {
 
             await expect(service.update('group-1', 'payment-1', invalid)).rejects.toThrow(
                 BadRequestException,
+            );
+            expect(prisma.payment.update).not.toHaveBeenCalled();
+        });
+
+        it('rejects an updated participant who is not an active group member', async () => {
+            const invalid = { ...dto, toUserId: 'outside-user' };
+
+            await expect(service.update('group-1', 'payment-1', invalid)).rejects.toThrow(
+                'invalid userId(s): outside-user',
             );
             expect(prisma.payment.update).not.toHaveBeenCalled();
         });

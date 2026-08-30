@@ -21,7 +21,14 @@ describe('ExpensesService', () => {
     let service: ExpensesService;
     let prisma: any;
 
-    const group = { id: 'group-1', name: 'Daaru Party', createdAt: new Date() };
+    const group = {
+        id: 'group-1',
+        name: 'Daaru Party',
+        createdAt: new Date(),
+        members: ['user-1', 'user-2', 'friend-divanshu', 'a', 'b', 'c', 'd', 'e'].map((userId) => ({
+            userId,
+        })),
+    };
 
     beforeEach(() => {
         prisma = {
@@ -76,6 +83,36 @@ describe('ExpensesService', () => {
             };
 
             await expect(service.create('missing', dto)).rejects.toThrow(NotFoundException);
+        });
+
+        it('rejects a payer who is not an active group member', async () => {
+            const dto: CreateExpenseDto = {
+                description: 'Dinner',
+                amount: 100,
+                paidByUserId: 'outside-user',
+                splitType: SplitType.equal,
+                splits: [{ userId: 'user-1', amount: 100 }],
+            };
+
+            await expect(service.create('group-1', dto)).rejects.toThrow(
+                'All participants must be active group members',
+            );
+            expect(prisma.expense.create).not.toHaveBeenCalled();
+        });
+
+        it('rejects a split participant who is not an active group member', async () => {
+            const dto: CreateExpenseDto = {
+                description: 'Dinner',
+                amount: 100,
+                paidByUserId: 'user-1',
+                splitType: SplitType.equal,
+                splits: [{ userId: 'outside-user', amount: 100 }],
+            };
+
+            await expect(service.create('group-1', dto)).rejects.toThrow(
+                'invalid userId(s): outside-user',
+            );
+            expect(prisma.expense.create).not.toHaveBeenCalled();
         });
 
         it('defaults paidOn to today when omitted', async () => {
@@ -403,6 +440,18 @@ describe('ExpensesService', () => {
 
             await expect(service.update('group-1', 'expense-1', badDto)).rejects.toThrow(
                 BadRequestException,
+            );
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('rejects an updated participant who is not an active group member', async () => {
+            const invalidDto: CreateExpenseDto = {
+                ...existingDto,
+                paidByUserId: 'outside-user',
+            };
+
+            await expect(service.update('group-1', 'expense-1', invalidDto)).rejects.toThrow(
+                'invalid userId(s): outside-user',
             );
             expect(prisma.$transaction).not.toHaveBeenCalled();
         });

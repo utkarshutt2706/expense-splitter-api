@@ -33,8 +33,8 @@ export class PaymentsController {
     @ApiResponse({
         status: 400,
         description:
-            'Validation error, fromUserId equals toUserId, or a userId does not reference an ' +
-            'existing user.',
+            'Validation error, fromUserId equals toUserId, or a participant is not an active ' +
+            'group member.',
         type: ErrorResponseDto,
         examples: {
             sameUser: {
@@ -45,10 +45,10 @@ export class PaymentsController {
                 ),
             },
             unknownUser: {
-                summary: 'Unknown fromUserId/toUserId',
+                summary: 'Participant is not an active group member',
                 value: errorExample(
                     'VALIDATION_ERROR',
-                    'fromUserId or toUserId does not reference an existing user',
+                    'All participants must be active group members; invalid userId(s): user-3',
                 ),
             },
         },
