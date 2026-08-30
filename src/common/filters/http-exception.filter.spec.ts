@@ -107,6 +107,24 @@ describe('HttpExceptionFilter', () => {
         });
     });
 
+    it('maps rate-limit responses to a TOO_MANY_REQUESTS error', () => {
+        const res = mockResponse();
+        const exception = new HttpException(
+            'Too many requests. Please try again later.',
+            HttpStatus.TOO_MANY_REQUESTS,
+        );
+
+        filter.catch(exception, mockHost(res));
+
+        expect(res.status).toHaveBeenCalledWith(HttpStatus.TOO_MANY_REQUESTS);
+        expect(res.json).toHaveBeenCalledWith({
+            error: {
+                code: 'TOO_MANY_REQUESTS',
+                message: 'Too many requests. Please try again later.',
+            },
+        });
+    });
+
     it('capitalizes the first letter of each validation message', () => {
         const res = mockResponse();
         const exception = new BadRequestException(['name must be a string', 'name is required']);

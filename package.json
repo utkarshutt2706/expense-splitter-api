@@ -37,6 +37,7 @@
         "@nestjs/mapped-types": "^2.1.1",
         "@nestjs/platform-express": "^11.2.1",
         "@nestjs/swagger": "^11.4.7",
+        "@nestjs/throttler": "^6.5.0",
         "@prisma/adapter-pg": "^7.9.1",
         "@prisma/client": "^7.10.0",
         "class-transformer": "^0.5.1",

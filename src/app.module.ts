@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { BalancesModule } from './balances/balances.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -19,6 +20,15 @@ import { UsersModule } from './users/users.module';
         ConfigModule.forRoot({
             isGlobal: true,
             validate: validateEnv,
+        }),
+        ThrottlerModule.forRoot({
+            throttlers: [
+                {
+                    ttl: 60_000,
+                    limit: 10,
+                },
+            ],
+            errorMessage: 'Too many requests. Please try again later.',
         }),
         PrismaModule,
         AuthModule,
