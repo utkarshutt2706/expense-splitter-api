@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserResponseDto } from './user-response.dto';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
 
 export class FriendGroupBalanceDto {
     @ApiProperty()
