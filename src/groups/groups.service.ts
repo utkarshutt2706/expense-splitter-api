@@ -16,6 +16,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 type GroupWithMembers = Group & { members: GroupMember[] };
 
 const ACTIVE_MEMBER = { leftAt: null };
+const SERIALIZABLE_TRANSACTION_ATTEMPTS = 3;
 
 @Injectable()
 export class GroupsService {
@@ -125,77 +126,87 @@ export class GroupsService {
     }
 
     async remove(id: string): Promise<void> {
-        const { balances } = await this.balancesService.getGroupBalances(id);
-        const unsettled = balances.filter((entry) => entry.balance !== 0);
-        if (unsettled.length > 0) {
-            throw new ConflictException(
-                'Cannot delete a group with unsettled balances -- everyone must be settled up first',
-            );
-        }
-
         try {
-            await this.prisma.group.delete({ where: { id } });
+            await this.runSerializableTransaction(async (tx) => {
+                const { balances } = await this.balancesService.getGroupBalances(id, tx);
+                const unsettled = balances.filter((entry) => entry.balance !== 0);
+                if (unsettled.length > 0) {
+                    throw new ConflictException(
+                        'Cannot delete a group with unsettled balances -- everyone must be settled up first',
+                    );
+                }
+
+                await tx.group.delete({ where: { id } });
+            });
         } catch (error) {
             throw this.mapPrismaError(error, id);
         }
     }
 
     async update(id: string, dto: UpdateGroupDto): Promise<GroupResponseDto> {
-        const existing = await this.prisma.group.findUnique({
-            where: { id },
-            include: { members: { where: ACTIVE_MEMBER } },
-        });
-        if (!existing) {
-            throw new NotFoundException(`Group ${id} not found`);
-        }
-
-        let toRemove: string[] = [];
-        let toAdd: string[] = [];
-        if (dto.memberIds) {
-            const currentUserIds = new Set(existing.members.map((member) => member.userId));
-            const nextUserIds = new Set(dto.memberIds);
-            toRemove = [...currentUserIds].filter((userId) => !nextUserIds.has(userId));
-            toAdd = [...nextUserIds].filter((userId) => !currentUserIds.has(userId));
-
-            if (toRemove.length > 0) {
-                const { balances } = await this.balancesService.getGroupBalances(id);
-                const unsettled = balances.filter(
-                    (entry) => toRemove.includes(entry.userId) && entry.balance !== 0,
-                );
-                if (unsettled.length > 0) {
-                    throw new ConflictException(
-                        `Cannot remove member(s) with an unsettled balance: ${unsettled
-                            .map((entry) => entry.userId)
-                            .join(', ')}`,
-                    );
-                }
-            }
-        }
-
         try {
-            if (dto.memberIds) {
-                await this.prisma.$transaction([
-                    this.prisma.groupMember.updateMany({
+            return await this.runSerializableTransaction(async (tx) => {
+                const existing = await tx.group.findUnique({
+                    where: { id },
+                    include: { members: { where: ACTIVE_MEMBER } },
+                });
+                if (!existing) {
+                    throw new NotFoundException(`Group ${id} not found`);
+                }
+
+                if (dto.memberIds) {
+                    const currentUserIds = new Set(existing.members.map((member) => member.userId));
+                    const nextUserIds = new Set(dto.memberIds);
+                    const toRemove = [...currentUserIds].filter(
+                        (userId) => !nextUserIds.has(userId),
+                    );
+                    const toAdd = [...nextUserIds].filter((userId) => !currentUserIds.has(userId));
+
+                    if (toRemove.length > 0) {
+                        const { balances } = await this.balancesService.getGroupBalances(id, tx);
+                        const unsettled = balances.filter(
+                            (entry) => toRemove.includes(entry.userId) && entry.balance !== 0,
+                        );
+                        if (unsettled.length > 0) {
+                            throw new ConflictException(
+                                `Cannot remove member(s) with an unsettled balance: ${unsettled
+                                    .map((entry) => entry.userId)
+                                    .join(', ')}`,
+                            );
+                        }
+                    }
+
+                    await tx.groupMember.updateMany({
                         where: { groupId: id, userId: { in: toRemove } },
                         data: { leftAt: new Date() },
-                    }),
-                    ...toAdd.map((userId) =>
-                        this.prisma.groupMember.upsert({
-                            where: { groupId_userId: { groupId: id, userId } },
-                            create: { groupId: id, userId },
-                            update: { leftAt: null },
-                        }),
-                    ),
-                ]);
-            }
-            if (dto.name !== undefined) {
-                await this.prisma.group.update({ where: { id }, data: { name: dto.name } });
-            }
+                    });
+                    await Promise.all(
+                        toAdd.map((userId) =>
+                            tx.groupMember.upsert({
+                                where: { groupId_userId: { groupId: id, userId } },
+                                create: { groupId: id, userId },
+                                update: { leftAt: null },
+                            }),
+                        ),
+                    );
+                }
+
+                if (dto.name !== undefined) {
+                    await tx.group.update({ where: { id }, data: { name: dto.name } });
+                }
+
+                const updated = await tx.group.findUnique({
+                    where: { id },
+                    include: { members: { where: ACTIVE_MEMBER } },
+                });
+                if (!updated) {
+                    throw new NotFoundException(`Group ${id} not found`);
+                }
+                return this.toResponse(updated);
+            });
         } catch (error) {
             throw this.mapPrismaError(error, id);
         }
-
-        return this.findOne(id);
     }
 
     private toResponse(group: GroupWithMembers): GroupResponseDto {
@@ -205,6 +216,26 @@ export class GroupsService {
             memberIds: group.members.map((member) => member.userId),
             createdAt: group.createdAt.toISOString(),
         };
+    }
+
+    private async runSerializableTransaction<T>(
+        operation: (tx: Prisma.TransactionClient) => Promise<T>,
+    ): Promise<T> {
+        for (let attempt = 1; attempt <= SERIALIZABLE_TRANSACTION_ATTEMPTS; attempt++) {
+            try {
+                return await this.prisma.$transaction(operation, {
+                    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+                });
+            } catch (error) {
+                const isRetryableConflict =
+                    error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+                if (!isRetryableConflict || attempt === SERIALIZABLE_TRANSACTION_ATTEMPTS) {
+                    throw error;
+                }
+            }
+        }
+
+        throw new Error('Serializable transaction retry limit exceeded');
     }
 
     private mapPrismaError(error: unknown, id?: string): Error {

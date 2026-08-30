@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateNetBalances, simplifyDebts } from './balance-calculator';
 import { GroupBalancesResponseDto } from './dto/group-balances-response.dto';
@@ -7,8 +8,11 @@ import { GroupBalancesResponseDto } from './dto/group-balances-response.dto';
 export class BalancesService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async getGroupBalances(groupId: string): Promise<GroupBalancesResponseDto> {
-        const group = await this.prisma.group.findUnique({
+    async getGroupBalances(
+        groupId: string,
+        client: Prisma.TransactionClient | PrismaService = this.prisma,
+    ): Promise<GroupBalancesResponseDto> {
+        const group = await client.group.findUnique({
             where: { id: groupId },
             include: { members: true },
         });
@@ -17,11 +21,11 @@ export class BalancesService {
         }
 
         const [expenses, payments] = await Promise.all([
-            this.prisma.expense.findMany({
+            client.expense.findMany({
                 where: { groupId },
                 include: { splits: true },
             }),
-            this.prisma.payment.findMany({ where: { groupId } }),
+            client.payment.findMany({ where: { groupId } }),
         ]);
 
         const memberIds = group.members.map((member) => member.userId);

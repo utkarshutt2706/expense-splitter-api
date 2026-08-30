@@ -63,6 +63,9 @@ describe('GroupsService', () => {
         balancesService = {
             getGroupBalances: jest.fn().mockResolvedValue(settledBalances('user-1', 'user-2')),
         };
+        prisma.$transaction.mockImplementation(
+            async (operation: (tx: typeof prisma) => Promise<unknown>) => operation(prisma),
+        );
         service = new GroupsService(
             prisma as unknown as PrismaService,
             balancesService as unknown as BalancesService,
@@ -224,6 +227,10 @@ describe('GroupsService', () => {
             prisma.group.delete.mockResolvedValue(group);
 
             await expect(service.remove('group-1')).resolves.toBeUndefined();
+            expect(balancesService.getGroupBalances).toHaveBeenCalledWith('group-1', prisma);
+            expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            });
         });
 
         it('throws ConflictException when any member has an unsettled balance', async () => {
@@ -244,12 +251,20 @@ describe('GroupsService', () => {
 
             await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
         });
+
+        it('retries a serializable transaction conflict', async () => {
+            prisma.$transaction.mockRejectedValueOnce(knownRequestError('P2034'));
+            prisma.group.delete.mockResolvedValue(group);
+
+            await expect(service.remove('group-1')).resolves.toBeUndefined();
+            expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+            expect(prisma.group.delete).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('update', () => {
         beforeEach(() => {
             prisma.group.findUnique.mockResolvedValue(group);
-            prisma.$transaction.mockResolvedValue(undefined);
         });
 
         it('throws NotFoundException when the group does not exist', async () => {
@@ -269,7 +284,9 @@ describe('GroupsService', () => {
                 where: { id: 'group-1' },
                 data: { name: 'New Name' },
             });
-            expect(prisma.$transaction).not.toHaveBeenCalled();
+            expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            });
         });
 
         it('soft-removes members no longer in the list and upserts new ones', async () => {
@@ -291,7 +308,7 @@ describe('GroupsService', () => {
         it('checks balances only for the members actually being removed', async () => {
             await service.update('group-1', { memberIds: ['user-2', 'user-3'] });
 
-            expect(balancesService.getGroupBalances).toHaveBeenCalledWith('group-1');
+            expect(balancesService.getGroupBalances).toHaveBeenCalledWith('group-1', prisma);
         });
 
         it('throws ConflictException when a member being removed has an unsettled balance', async () => {
@@ -306,7 +323,7 @@ describe('GroupsService', () => {
             const result = service.update('group-1', { memberIds: ['user-2', 'user-3'] });
 
             await expect(result).rejects.toThrow(ConflictException);
-            expect(prisma.$transaction).not.toHaveBeenCalled();
+            expect(prisma.groupMember.updateMany).not.toHaveBeenCalled();
         });
 
         it('does not check balances when no one is being removed', async () => {
@@ -338,7 +355,7 @@ describe('GroupsService', () => {
             const result = service.update('group-1', {});
 
             await expect(result).resolves.toMatchObject({ id: 'group-1' });
-            expect(prisma.$transaction).not.toHaveBeenCalled();
+            expect(prisma.$transaction).toHaveBeenCalled();
             expect(prisma.group.update).not.toHaveBeenCalled();
         });
 
