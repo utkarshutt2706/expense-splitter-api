@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 export const REFRESH_COOKIE_NAME = 'expense_splitter_refresh';
 export const REFRESH_SESSION_TTL_MS = 7 * 24 * 60 * 60_000;

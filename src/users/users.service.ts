@@ -42,11 +42,14 @@ export class UsersService {
         const isEmailLookup = search.includes('@');
         const isPhoneLookup = /^\+?\d+$/.test(search);
 
-        const where: Prisma.UserWhereInput = isEmailLookup
-            ? { email: { equals: search, mode: 'insensitive' } }
-            : isPhoneLookup
-              ? { phone: { equals: search } }
-              : { name: { contains: search, mode: 'insensitive' } };
+        let where: Prisma.UserWhereInput;
+        if (isEmailLookup) {
+            where = { email: { equals: search, mode: 'insensitive' } };
+        } else if (isPhoneLookup) {
+            where = { phone: { equals: search } };
+        } else {
+            where = { name: { contains: search, mode: 'insensitive' } };
+        }
 
         return this.prisma.user.findMany({
             where,
