@@ -3,7 +3,16 @@ import { ApiProperty } from '@nestjs/swagger';
 export class ErrorDetailDto {
     @ApiProperty({
         example: 'VALIDATION_ERROR',
-        enum: ['VALIDATION_ERROR', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'ERROR'],
+        enum: [
+            'VALIDATION_ERROR',
+            'UNAUTHORIZED',
+            'FORBIDDEN',
+            'NOT_FOUND',
+            'CONFLICT',
+            'TOO_MANY_REQUESTS',
+            'SERVICE_UNAVAILABLE',
+            'ERROR',
+        ],
     })
     code: string;
 

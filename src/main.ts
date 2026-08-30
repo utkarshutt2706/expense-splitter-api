@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -8,7 +9,11 @@ import { createDocsBasicAuthMiddleware } from './common/middleware/docs-basic-au
 import { isOriginAllowed, parseAllowedOrigins } from './config/cors';
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+    // Render terminates client connections at one trusted reverse-proxy hop. This lets
+    // Express derive req.ip from that proxy's X-Forwarded-For value for per-client limits.
+    app.set('trust proxy', 1);
 
     app.useGlobalInterceptors(new ControllerErrorLoggingInterceptor());
     app.useGlobalFilters(new HttpExceptionFilter());

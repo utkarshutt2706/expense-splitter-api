@@ -1,10 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtPayload } from '../common/jwt-payload';
 import { AuthService } from './auth.service';
+import { AUTH_RATE_LIMITS } from './auth-rate-limits';
 import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -16,6 +18,8 @@ export class AuthController {
 
     @Public()
     @Post('register')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: AUTH_RATE_LIMITS.register })
     @ApiOperation({
         summary: 'Register a new account',
         description: 'Creates a User and returns a ready-to-use accessToken, same shape as Login.',
@@ -41,6 +45,12 @@ export class AuthController {
         type: ErrorResponseDto,
         example: errorExample('CONFLICT', 'A user with this email already exists'),
     })
+    @ApiResponse({
+        status: 429,
+        description: 'Too many registration attempts from this client.',
+        type: ErrorResponseDto,
+        example: errorExample('TOO_MANY_REQUESTS', 'Too many requests. Please try again later.'),
+    })
     register(@Body() dto: RegisterDto): Promise<AuthTokenResponseDto> {
         return this.authService.register(dto);
     }
@@ -48,6 +58,8 @@ export class AuthController {
     @Public()
     @Post('login')
     @HttpCode(HttpStatus.OK)
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: AUTH_RATE_LIMITS.login })
     @ApiOperation({ summary: 'Log in with email and password' })
     @ApiResponse({ status: 200, description: 'Credentials valid.', type: AuthTokenResponseDto })
     @ApiResponse({
@@ -55,6 +67,12 @@ export class AuthController {
         description: 'Email not registered, no password set, or wrong password.',
         type: ErrorResponseDto,
         example: errorExample('UNAUTHORIZED', 'Invalid email or password'),
+    })
+    @ApiResponse({
+        status: 429,
+        description: 'Too many login attempts from this client.',
+        type: ErrorResponseDto,
+        example: errorExample('TOO_MANY_REQUESTS', 'Too many requests. Please try again later.'),
     })
     login(@Body() dto: LoginDto): Promise<AuthTokenResponseDto> {
         return this.authService.login(dto);
