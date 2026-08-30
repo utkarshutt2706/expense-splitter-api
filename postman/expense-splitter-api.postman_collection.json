@@ -47,12 +47,6 @@
             "value": "",
             "type": "string",
             "description": "Set after creating/listing a payment"
-        },
-        {
-            "key": "inviteToken",
-            "value": "",
-            "type": "string",
-            "description": "Copy from the invite link/log after Invitations > Create -- never returned in a response body"
         }
     ],
     "item": [
@@ -72,12 +66,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/health",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "health"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["health"]
                         },
                         "auth": {
                             "type": "noauth"
@@ -97,12 +87,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/health",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "health"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["health"]
                                 },
                                 "auth": {
                                     "type": "noauth"
@@ -140,13 +126,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/auth/register",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "register"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["auth", "register"]
                         },
                         "body": {
                             "mode": "raw",
@@ -160,7 +141,7 @@
                         "auth": {
                             "type": "noauth"
                         },
-                        "description": "Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a public user plus a ready-to-use accessToken. `inviteToken` is optional -- when present (taken from the `?invite=` query param on the registration link emailed by Invitations > Create), registration atomically also joins the invited group and marks the invitation accepted. Saved as a Test script on this request to auto-populate the `accessToken` collection variable."
+                        "description": "Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a public user plus a ready-to-use accessToken. Saved as a Test script on this request to auto-populate the `accessToken` collection variable."
                     },
                     "response": [
                         {
@@ -175,13 +156,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "register"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -220,13 +196,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "register"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -265,13 +236,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "register"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -297,141 +263,6 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"A user with this email already exists\"\n    }\n}"
-                        },
-                        {
-                            "name": "201 Created - registering through a group invitation",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "Created",
-                            "code": 201,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"user\": {\n        \"id\": \"{{$guid}}\",\n        \"name\": \"New Friend\",\n        \"email\": \"new.friend@example.com\",\n        \"phone\": \"9000000001\",\n        \"avatarUrl\": null\n    },\n    \"accessToken\": \"{{accessToken}}\"\n}"
-                        },
-                        {
-                            "name": "400 Bad Request - email does not match the invitation",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "Bad Request",
-                            "code": 400,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Email does not match the invitation\"\n    }\n}"
-                        },
-                        {
-                            "name": "409 Conflict - invitation is expired, revoked, or already accepted",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/auth/register",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "register"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"name\": \"New Friend\",\n    \"email\": \"new.friend@example.com\",\n    \"phone\": \"9000000001\",\n    \"password\": \"correct-horse-battery-staple\",\n    \"inviteToken\": \"{{inviteToken}}\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "Conflict",
-                            "code": 409,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This invitation is no longer valid\"\n    }\n}"
                         }
                     ],
                     "event": [
@@ -463,13 +294,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/auth/login",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "login"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["auth", "login"]
                         },
                         "body": {
                             "mode": "raw",
@@ -498,13 +324,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/login",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "login"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "login"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -543,13 +364,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/login",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "login"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "login"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -606,13 +422,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/auth/password",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "password"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["auth", "password"]
                         },
                         "body": {
                             "mode": "raw",
@@ -638,13 +449,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/password",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "password"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "password"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -680,13 +486,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/password",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "password"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "password"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -722,13 +523,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/password",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "password"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "password"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -764,13 +560,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/auth/password",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "auth",
-                                        "password"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["auth", "password"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -810,7 +601,7 @@
         },
         {
             "name": "Users",
-            "description": "There is no way to manually create a user record or list every registered user -- every account comes from Auth > Register (directly or via an accepted invitation). Use Lookup to find a specific registered user by exact email/phone, or My friends to list users you share a group with. PATCH/DELETE only work on your own account (self-ownership enforced, 403 otherwise).",
+            "description": "There is no way to manually create a user record or list every registered user -- every account comes from Auth > Register. Use Lookup to find a specific registered user by exact email/phone, or My friends to list users you share a group with. PATCH/DELETE only work on your own account (self-ownership enforced, 403 otherwise).",
             "item": [
                 {
                     "name": "Lookup user by email or phone",
@@ -824,15 +615,10 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "lookup?email=abhay.verma%40example.com"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "lookup?email=abhay.verma%40example.com"]
                         },
-                        "description": "Exact match only -- used by the frontend when a searched email/phone isn't already in the caller's friend list, to decide between \"add directly\" (found) and \"invite by email\" (not found)."
+                        "description": "Exact match only -- used by the frontend when a searched email/phone isn't already in the caller's friend list, so an existing account can be added directly to a group."
                     },
                     "response": [
                         {
@@ -847,13 +633,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "lookup?email=abhay.verma%40example.com"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "lookup?email=abhay.verma%40example.com"]
                                 }
                             },
                             "status": "OK",
@@ -880,13 +661,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/lookup?phone=9876543210",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "lookup?phone=9876543210"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "lookup?phone=9876543210"]
                                 }
                             },
                             "status": "OK",
@@ -913,9 +689,7 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com&phone=9876543210",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
+                                    "host": ["{{baseUrl}}"],
                                     "path": [
                                         "users",
                                         "lookup?email=abhay.verma%40example.com&phone=9876543210"
@@ -946,13 +720,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/lookup?email=nobody%40example.com",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "lookup?email=nobody%40example.com"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "lookup?email=nobody%40example.com"]
                                 }
                             },
                             "status": "Not Found",
@@ -979,13 +748,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/lookup?email=abhay.verma%40example.com",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "lookup?email=abhay.verma%40example.com"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "lookup?email=abhay.verma%40example.com"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -1024,14 +788,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/me/friends",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "me",
-                                "friends"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "me", "friends"]
                         },
                         "description": "Derived, not stored: every user the caller has ever shared a group with (bidirectional, deduplicated, survives being removed from the group later)."
                     },
@@ -1048,14 +806,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/me/friends",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "me",
-                                        "friends"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "me", "friends"]
                                 }
                             },
                             "status": "OK",
@@ -1082,14 +834,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/me/friends",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "me",
-                                        "friends"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "me", "friends"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -1128,13 +874,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/batch",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "batch"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "batch"]
                         },
                         "body": {
                             "mode": "raw",
@@ -1160,13 +901,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/batch",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "batch"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "batch"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1202,13 +938,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/batch",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "batch"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "batch"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1244,13 +975,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/batch",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "batch"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "batch"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1286,13 +1012,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/batch",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "batch"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "batch"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1340,13 +1061,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/{{userId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{userId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "{{userId}}"]
                         },
                         "description": "{{userId}} defaults to the seeded current-user."
                     },
@@ -1363,13 +1079,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 }
                             },
                             "status": "OK",
@@ -1396,13 +1107,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -1429,13 +1135,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -1474,13 +1175,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/{{userId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{userId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "{{userId}}"]
                         },
                         "body": {
                             "mode": "raw",
@@ -1506,13 +1202,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1548,13 +1239,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1590,13 +1276,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "does-not-exist"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1632,13 +1313,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1674,13 +1350,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1726,13 +1397,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -1770,13 +1436,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/users/{{userId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{userId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users", "{{userId}}"]
                         },
                         "description": "Blocked with 409 if the user has paid for or split any expense, or sent/received a payment. Self only: {{userId}} must match the caller."
                     },
@@ -1793,13 +1454,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 }
                             },
                             "status": "No Content",
@@ -1826,13 +1482,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -1859,13 +1510,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 }
                             },
                             "status": "Conflict",
@@ -1892,13 +1538,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -1935,13 +1576,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/users/{{userId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "{{userId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["users", "{{userId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -1976,12 +1612,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups"]
                         },
                         "body": {
                             "mode": "raw",
@@ -2007,12 +1639,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2048,12 +1676,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2089,12 +1713,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2130,12 +1750,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2183,12 +1799,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups"]
                         }
                     },
                     "response": [
@@ -2204,12 +1816,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups"]
                                 }
                             },
                             "status": "OK",
@@ -2238,13 +1846,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}"]
                         },
                         "description": "{{groupId}} defaults to the seeded group-daaru-party."
                     },
@@ -2261,13 +1864,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 }
                             },
                             "status": "OK",
@@ -2294,13 +1892,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -2327,13 +1920,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -2370,13 +1958,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -2405,13 +1988,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}"]
                         },
                         "body": {
                             "mode": "raw",
@@ -2437,13 +2015,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2479,13 +2052,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2521,13 +2089,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2563,13 +2126,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2605,13 +2163,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2647,13 +2200,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2699,13 +2247,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -2743,13 +2286,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}"]
                         },
                         "description": "Cascades: deletes the group's memberships, expenses, expense splits, and payments too. Blocked with 409 while any member of the group has a non-zero balance."
                     },
@@ -2766,13 +2304,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 }
                             },
                             "status": "No Content",
@@ -2799,13 +2332,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -2832,13 +2360,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 }
                             },
                             "status": "Conflict",
@@ -2865,13 +2388,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -2908,13 +2426,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -2928,494 +2441,6 @@
                             ],
                             "cookie": [],
                             "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "Invitations",
-            "description": "Invite an email that is not yet registered to join a group. The raw token is never returned by the API -- it only goes out in the invite email (`${FRONTEND_URL}/register?invite=<token>`), so treat `{{inviteToken}}` below as something you copy from that link/log, not from a response body.",
-            "item": [
-                {
-                    "name": "Create invitation",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "invitations"
-                            ]
-                        },
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "description": "Only for emails that are not yet registered. If the email already belongs to a registered user, look them up via Users > Lookup and add them directly with Groups > Update instead."
-                    },
-                    "response": [
-                        {
-                            "name": "201 Created",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "Created",
-                            "code": 201,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"id\": \"{{$guid}}\",\n    \"groupId\": \"group-daaru-party\",\n    \"email\": \"not.registered.yet@example.com\",\n    \"status\": \"pending\",\n    \"expiresAt\": \"{{$isoTimestamp}}\"\n}"
-                        },
-                        {
-                            "name": "200 OK - a pending invitation for this email already exists (idempotent)",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "OK",
-                            "code": 200,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"id\": \"{{$guid}}\",\n    \"groupId\": \"group-daaru-party\",\n    \"email\": \"not.registered.yet@example.com\",\n    \"status\": \"pending\",\n    \"expiresAt\": \"{{$isoTimestamp}}\"\n}"
-                        },
-                        {
-                            "name": "400 Validation Error - malformed email",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not-an-email\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "Bad Request",
-                            "code": 400,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"VALIDATION_ERROR\",\n        \"message\": \"Email must be an email\"\n    }\n}"
-                        },
-                        {
-                            "name": "409 Conflict - email already belongs to a registered user",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"abhay.verma@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "Conflict",
-                            "code": 409,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"A user with this email is already registered -- add them to the group directly instead of inviting\"\n    }\n}"
-                        },
-                        {
-                            "name": "409 Conflict - email already an active member of this group",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"divanshu.gupta@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "Conflict",
-                            "code": 409,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This email is already a member of the group\"\n    }\n}"
-                        },
-                        {
-                            "name": "401 Unauthorized - missing/invalid token",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                },
-                                "auth": {
-                                    "type": "bearer",
-                                    "bearer": [
-                                        {
-                                            "key": "token",
-                                            "value": "not-a-real-token",
-                                            "type": "string"
-                                        }
-                                    ]
-                                }
-                            },
-                            "status": "Unauthorized",
-                            "code": 401,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"UNAUTHORIZED\",\n        \"message\": \"Invalid or expired token\"\n    }\n}"
-                        },
-                        {
-                            "name": "403 Forbidden - not a member of this group",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/groups/{{groupId}}/invitations",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "invitations"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n    \"email\": \"not.registered.yet@example.com\"\n}",
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            },
-                            "status": "Forbidden",
-                            "code": 403,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"FORBIDDEN\",\n        \"message\": \"You are not a member of this group\"\n    }\n}"
-                        }
-                    ]
-                },
-                {
-                    "name": "Validate invitation token",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "invitations",
-                                "{{inviteToken}}"
-                            ]
-                        },
-                        "auth": {
-                            "type": "noauth"
-                        },
-                        "description": "Public -- no token required to call this endpoint (the invitation token itself is the credential). The frontend calls this when the registration page loads with `?invite=` in the URL, to show which group/email the invite is for before the person registers."
-                    },
-                    "response": [
-                        {
-                            "name": "200 OK",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "invitations",
-                                        "{{inviteToken}}"
-                                    ]
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "OK",
-                            "code": 200,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"email\": \"not.registered.yet@example.com\",\n    \"group\": {\n        \"id\": \"group-daaru-party\",\n        \"name\": \"Daaru Party\"\n    }\n}"
-                        },
-                        {
-                            "name": "404 Not Found - token does not match any invitation",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/invitations/not-a-real-token",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "invitations",
-                                        "not-a-real-token"
-                                    ]
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "Not Found",
-                            "code": 404,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"NOT_FOUND\",\n        \"message\": \"Invitation not found\"\n    }\n}"
-                        },
-                        {
-                            "name": "409 Conflict - expired, revoked, or already accepted",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{baseUrl}}/invitations/{{inviteToken}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "invitations",
-                                        "{{inviteToken}}"
-                                    ]
-                                },
-                                "auth": {
-                                    "type": "noauth"
-                                }
-                            },
-                            "status": "Conflict",
-                            "code": 409,
-                            "_postman_previewlanguage": "json",
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "cookie": [],
-                            "body": "{\n    \"error\": {\n        \"code\": \"CONFLICT\",\n        \"message\": \"This invitation is no longer valid\"\n    }\n}"
                         }
                     ]
                 }
@@ -3437,14 +2462,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "expenses"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "expenses"]
                         },
                         "body": {
                             "mode": "raw",
@@ -3470,14 +2489,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3513,14 +2526,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3556,14 +2563,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3599,14 +2600,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3642,14 +2637,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3685,14 +2674,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3728,14 +2711,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3771,14 +2748,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3814,14 +2785,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3857,14 +2822,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3910,14 +2869,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -3955,14 +2908,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "expenses"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "expenses"]
                         }
                     },
                     "response": [
@@ -3978,14 +2925,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 }
                             },
                             "status": "OK",
@@ -4012,14 +2953,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist", "expenses"]
                                 }
                             },
                             "status": "Not Found",
@@ -4046,14 +2981,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -4090,14 +3019,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses"]
                                 }
                             },
                             "status": "Forbidden",
@@ -4126,15 +3049,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "expenses",
-                                "{{expenseId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                         },
                         "description": "Scoped to the group in the URL -- an expense that exists but belongs to a different group also 404s here, rather than leaking cross-group data."
                     },
@@ -4151,15 +3067,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 }
                             },
                             "status": "OK",
@@ -4186,15 +3095,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -4221,15 +3123,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -4266,15 +3161,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -4303,15 +3191,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "expenses",
-                                "{{expenseId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                         },
                         "body": {
                             "mode": "raw",
@@ -4337,15 +3218,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4381,15 +3255,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4425,15 +3292,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "does-not-exist"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4469,15 +3329,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4523,15 +3376,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4569,15 +3415,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "expenses",
-                                "{{expenseId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                         },
                         "description": "Cascades to the expense's own splits."
                     },
@@ -4594,15 +3433,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 }
                             },
                             "status": "No Content",
@@ -4629,15 +3461,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -4664,15 +3489,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -4709,15 +3527,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/expenses/{{expenseId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "expenses",
-                                        "{{expenseId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "expenses", "{{expenseId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -4752,14 +3563,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "payments"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "payments"]
                         },
                         "body": {
                             "mode": "raw",
@@ -4784,14 +3589,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4827,14 +3626,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4870,14 +3663,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4913,14 +3700,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4956,14 +3737,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -4999,14 +3774,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5052,14 +3821,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5097,14 +3860,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "payments"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "payments"]
                         }
                     },
                     "response": [
@@ -5120,14 +3877,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 }
                             },
                             "status": "OK",
@@ -5154,14 +3905,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist", "payments"]
                                 }
                             },
                             "status": "Not Found",
@@ -5188,14 +3933,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -5232,14 +3971,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments"]
                                 }
                             },
                             "status": "Forbidden",
@@ -5268,15 +4001,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "payments",
-                                "{{paymentId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                         },
                         "body": {
                             "mode": "raw",
@@ -5302,15 +4028,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5346,15 +4065,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5390,15 +4102,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "does-not-exist"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5434,15 +4139,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5488,15 +4186,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 },
                                 "body": {
                                     "mode": "raw",
@@ -5534,15 +4225,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "payments",
-                                "{{paymentId}}"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                         }
                     },
                     "response": [
@@ -5558,15 +4242,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 }
                             },
                             "status": "No Content",
@@ -5593,15 +4270,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/does-not-exist",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "does-not-exist"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "does-not-exist"]
                                 }
                             },
                             "status": "Not Found",
@@ -5628,15 +4298,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -5673,15 +4336,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/payments/{{paymentId}}",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "payments",
-                                        "{{paymentId}}"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "payments", "{{paymentId}}"]
                                 }
                             },
                             "status": "Forbidden",
@@ -5716,14 +4372,8 @@
                         ],
                         "url": {
                             "raw": "{{baseUrl}}/groups/{{groupId}}/balances",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "groups",
-                                "{{groupId}}",
-                                "balances"
-                            ]
+                            "host": ["{{baseUrl}}"],
+                            "path": ["groups", "{{groupId}}", "balances"]
                         },
                         "description": "`settlements` is the Simplify Debt-minimized transaction list -- the fewest payments needed to bring every member to zero, not a raw pairwise ledger. The 200 example here is real output from the seeded demo data."
                     },
@@ -5740,14 +4390,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/balances",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "balances"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "balances"]
                                 }
                             },
                             "status": "OK",
@@ -5774,14 +4418,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/does-not-exist/balances",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "does-not-exist",
-                                        "balances"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "does-not-exist", "balances"]
                                 }
                             },
                             "status": "Not Found",
@@ -5808,14 +4446,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/balances",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "balances"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "balances"]
                                 },
                                 "auth": {
                                     "type": "bearer",
@@ -5852,14 +4484,8 @@
                                 ],
                                 "url": {
                                     "raw": "{{baseUrl}}/groups/{{groupId}}/balances",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "groups",
-                                        "{{groupId}}",
-                                        "balances"
-                                    ]
+                                    "host": ["{{baseUrl}}"],
+                                    "path": ["groups", "{{groupId}}", "balances"]
                                 }
                             },
                             "status": "Forbidden",

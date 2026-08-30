@@ -6,9 +6,6 @@ describe('validateEnv', () => {
         CORS_ALLOWED_ORIGINS: 'https://utkarshutt2706.github.io',
         API_KEY: 'a-sufficiently-long-secret',
         JWT_SECRET: 'a-sufficiently-long-jwt-signing-secret',
-        FRONTEND_URL: 'https://utkarshutt2706.github.io',
-        GMAIL_USER: 'someone@gmail.com',
-        GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop',
     };
 
     it('accepts a valid config and applies defaults', () => {
@@ -56,25 +53,5 @@ describe('validateEnv', () => {
         expect(() => validateEnv({ ...validConfig, NODE_ENV: 'staging' })).toThrow(
             'Invalid environment configuration',
         );
-    });
-
-    it('throws when GMAIL_USER is missing', () => {
-        const rest: Partial<typeof validConfig> = { ...validConfig };
-        delete rest.GMAIL_USER;
-
-        expect(() => validateEnv(rest)).toThrow('Invalid environment configuration');
-    });
-
-    it('throws when GMAIL_USER is not a valid email', () => {
-        expect(() => validateEnv({ ...validConfig, GMAIL_USER: 'not-an-email' })).toThrow(
-            'Invalid environment configuration',
-        );
-    });
-
-    it('throws when GMAIL_APP_PASSWORD is missing', () => {
-        const rest: Partial<typeof validConfig> = { ...validConfig };
-        delete rest.GMAIL_APP_PASSWORD;
-
-        expect(() => validateEnv(rest)).toThrow('Invalid environment configuration');
     });
 });

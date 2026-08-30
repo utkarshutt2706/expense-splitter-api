@@ -10,7 +10,6 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { FriendsModule } from './friends/friends.module';
 import { HealthModule } from './health/health.module';
-import { InvitationsModule } from './invitations/invitations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -29,7 +28,6 @@ import { UsersModule } from './users/users.module';
         PaymentsModule,
         BalancesModule,
         DashboardModule,
-        InvitationsModule,
         FriendsModule,
         HealthModule,
     ],

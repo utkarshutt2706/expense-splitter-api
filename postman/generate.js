@@ -208,41 +208,9 @@ const registerItem = item(
             409,
             { error: { code: 'CONFLICT', message: 'A user with this email already exists' } },
         ),
-        example(
-            '201 Created - registering through a group invitation',
-            req('POST', '/auth/register', {
-                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
-                noAuth: true,
-            }),
-            'Created',
-            201,
-            { user: authUserResponse(), accessToken: '{{accessToken}}' },
-        ),
-        example(
-            '400 Bad Request - email does not match the invitation',
-            req('POST', '/auth/register', {
-                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
-                noAuth: true,
-            }),
-            'Bad Request',
-            400,
-            { error: { code: 'VALIDATION_ERROR', message: 'Email does not match the invitation' } },
-        ),
-        example(
-            '409 Conflict - invitation is expired, revoked, or already accepted',
-            req('POST', '/auth/register', {
-                body: { ...newAccountBody, inviteToken: '{{inviteToken}}' },
-                noAuth: true,
-            }),
-            'Conflict',
-            409,
-            { error: { code: 'CONFLICT', message: 'This invitation is no longer valid' } },
-        ),
     ],
     'Public. Creates a user and a passwordHash for them, then returns the same shape as Login -- a ' +
-        'public user plus a ready-to-use accessToken. `inviteToken` is optional -- when present (taken ' +
-        'from the `?invite=` query param on the registration link emailed by Invitations > Create), ' +
-        'registration atomically also joins the invited group and marks the invitation accepted. ' +
+        'public user plus a ready-to-use accessToken. ' +
         'Saved as a Test script on this request to auto-populate the `accessToken` collection variable.',
 );
 registerItem.event = [captureAccessTokenScript];
@@ -338,7 +306,7 @@ const usersFolder = {
     name: 'Users',
     description:
         'There is no way to manually create a user record or list every registered user -- every ' +
-        'account comes from Auth > Register (directly or via an accepted invitation). Use Lookup to ' +
+        'account comes from Auth > Register. Use Lookup to ' +
         'find a specific registered user by exact email/phone, or My friends to list users you share ' +
         'a group with. PATCH/DELETE only work on your own account (self-ownership enforced, 403 ' +
         'otherwise).',
@@ -397,7 +365,7 @@ const usersFolder = {
                 ),
             ],
             "Exact match only -- used by the frontend when a searched email/phone isn't already in the " +
-                'caller\'s friend list, to decide between "add directly" (found) and "invite by email" (not found).',
+                "caller's friend list, so an existing account can be added directly to a group.",
         ),
         item(
             'My friends',
@@ -725,127 +693,6 @@ const groupsFolder = {
                 forbiddenExample('/groups/{{groupId}}', 'DELETE'),
             ],
             "Cascades: deletes the group's memberships, expenses, expense splits, and payments too. Blocked with 409 while any member of the group has a non-zero balance.",
-        ),
-    ],
-};
-
-// =====================================================================
-// Invitations
-// =====================================================================
-const inviteEmail = 'not.registered.yet@example.com';
-const invitationResponse = (overrides = {}) => ({
-    id: '{{$guid}}',
-    groupId: GROUP_ID,
-    email: inviteEmail,
-    status: 'pending',
-    expiresAt: '{{$isoTimestamp}}',
-    ...overrides,
-});
-
-const invitationsFolder = {
-    name: 'Invitations',
-    description:
-        'Invite an email that is not yet registered to join a group. The raw token is never returned ' +
-        'by the API -- it only goes out in the invite email (`${FRONTEND_URL}/register?invite=<token>`), ' +
-        'so treat `{{inviteToken}}` below as something you copy from that link/log, not from a response body.',
-    item: [
-        item(
-            'Create invitation',
-            req('POST', '/groups/{{groupId}}/invitations', { body: { email: inviteEmail } }),
-            [
-                example(
-                    '201 Created',
-                    req('POST', '/groups/{{groupId}}/invitations', {
-                        body: { email: inviteEmail },
-                    }),
-                    'Created',
-                    201,
-                    invitationResponse(),
-                ),
-                example(
-                    '200 OK - a pending invitation for this email already exists (idempotent)',
-                    req('POST', '/groups/{{groupId}}/invitations', {
-                        body: { email: inviteEmail },
-                    }),
-                    'OK',
-                    200,
-                    invitationResponse(),
-                ),
-                example(
-                    '400 Validation Error - malformed email',
-                    req('POST', '/groups/{{groupId}}/invitations', {
-                        body: { email: 'not-an-email' },
-                    }),
-                    'Bad Request',
-                    400,
-                    { error: { code: 'VALIDATION_ERROR', message: 'Email must be an email' } },
-                ),
-                example(
-                    '409 Conflict - email already belongs to a registered user',
-                    req('POST', '/groups/{{groupId}}/invitations', {
-                        body: { email: USERS.abhay.email },
-                    }),
-                    'Conflict',
-                    409,
-                    {
-                        error: {
-                            code: 'CONFLICT',
-                            message:
-                                'A user with this email is already registered -- add them to the group directly instead of inviting',
-                        },
-                    },
-                ),
-                example(
-                    '409 Conflict - email already an active member of this group',
-                    req('POST', '/groups/{{groupId}}/invitations', {
-                        body: { email: USERS.divanshu.email },
-                    }),
-                    'Conflict',
-                    409,
-                    {
-                        error: {
-                            code: 'CONFLICT',
-                            message: 'This email is already a member of the group',
-                        },
-                    },
-                ),
-                unauthorizedExample('/groups/{{groupId}}/invitations', 'POST', {
-                    email: inviteEmail,
-                }),
-                forbiddenExample('/groups/{{groupId}}/invitations', 'POST', { email: inviteEmail }),
-            ],
-            'Only for emails that are not yet registered. If the email already belongs to a registered ' +
-                'user, look them up via Users > Lookup and add them directly with Groups > Update instead.',
-        ),
-        item(
-            'Validate invitation token',
-            req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
-            [
-                example(
-                    '200 OK',
-                    req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
-                    'OK',
-                    200,
-                    { email: inviteEmail, group: { id: GROUP_ID, name: 'Daaru Party' } },
-                ),
-                example(
-                    '404 Not Found - token does not match any invitation',
-                    req('GET', '/invitations/not-a-real-token', { noAuth: true }),
-                    'Not Found',
-                    404,
-                    { error: { code: 'NOT_FOUND', message: 'Invitation not found' } },
-                ),
-                example(
-                    '409 Conflict - expired, revoked, or already accepted',
-                    req('GET', '/invitations/{{inviteToken}}', { noAuth: true }),
-                    'Conflict',
-                    409,
-                    { error: { code: 'CONFLICT', message: 'This invitation is no longer valid' } },
-                ),
-            ],
-            'Public -- no token required to call this endpoint (the invitation token itself is the ' +
-                'credential). The frontend calls this when the registration page loads with `?invite=` in ' +
-                'the URL, to show which group/email the invite is for before the person registers.',
         ),
     ],
 };
@@ -1466,20 +1313,12 @@ const collection = {
             type: 'string',
             description: 'Set after creating/listing a payment',
         },
-        {
-            key: 'inviteToken',
-            value: '',
-            type: 'string',
-            description:
-                'Copy from the invite link/log after Invitations > Create -- never returned in a response body',
-        },
     ],
     item: [
         healthFolder,
         authFolder,
         usersFolder,
         groupsFolder,
-        invitationsFolder,
         expensesFolder,
         paymentsFolder,
         balancesFolder,
