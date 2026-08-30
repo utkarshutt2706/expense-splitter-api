@@ -9,6 +9,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { hashPassword, verifyPassword } from './password-hasher';
+import { createRefreshToken, hashRefreshToken, REFRESH_SESSION_TTL_MS } from './refresh-session';
 
 @Injectable()
 export class AuthService {
@@ -60,6 +61,40 @@ export class AuthService {
 
         const passwordHash = await hashPassword(dto.newPassword);
         await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    }
+
+    async createRefreshSession(userId: string): Promise<string> {
+        const token = createRefreshToken();
+        await this.prisma.authSession.create({
+            data: {
+                userId,
+                tokenHash: hashRefreshToken(token),
+                expiresAt: new Date(Date.now() + REFRESH_SESSION_TTL_MS),
+            },
+        });
+        return token;
+    }
+
+    async refresh(refreshToken: string): Promise<AuthTokenResponseDto | null> {
+        const session = await this.prisma.authSession.findUnique({
+            where: { tokenHash: hashRefreshToken(refreshToken) },
+            include: { user: true },
+        });
+
+        if (!session || session.expiresAt <= new Date()) {
+            if (session) {
+                await this.prisma.authSession.delete({ where: { id: session.id } });
+            }
+            return null;
+        }
+
+        return this.toTokenResponse(session.user);
+    }
+
+    async revokeRefreshSession(refreshToken: string): Promise<void> {
+        await this.prisma.authSession.deleteMany({
+            where: { tokenHash: hashRefreshToken(refreshToken) },
+        });
     }
 
     private async toTokenResponse(user: Omit<User, 'passwordHash'>): Promise<AuthTokenResponseDto> {

@@ -17,18 +17,106 @@ describe('AuthService', () => {
     let service: AuthService;
     let prisma: {
         user: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+        authSession: {
+            create: jest.Mock;
+            findUnique: jest.Mock;
+            delete: jest.Mock;
+            deleteMany: jest.Mock;
+        };
     };
     let jwtService: { signAsync: jest.Mock };
 
     beforeEach(() => {
         prisma = {
             user: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+            authSession: {
+                create: jest.fn(),
+                findUnique: jest.fn(),
+                delete: jest.fn(),
+                deleteMany: jest.fn(),
+            },
         };
         jwtService = { signAsync: jest.fn().mockResolvedValue('signed-jwt-token') };
         service = new AuthService(
             prisma as unknown as PrismaService,
             jwtService as unknown as JwtService,
         );
+    });
+
+    describe('refresh sessions', () => {
+        const user = {
+            id: 'user-1',
+            name: 'Existing User',
+            email: 'existing@example.com',
+            phone: null,
+            avatarUrl: null,
+            passwordHash: 'not-returned',
+        };
+
+        it('stores a hash instead of the raw refresh token', async () => {
+            const token = await service.createRefreshSession(user.id);
+            const createMock = prisma.authSession.create as jest.Mock<
+                unknown,
+                [{ data: { userId: string; tokenHash: string; expiresAt: Date } }]
+            >;
+            const data = createMock.mock.calls[0][0].data;
+
+            expect(data.userId).toBe(user.id);
+            expect(data.tokenHash).not.toBe(token);
+            expect(data.tokenHash).toHaveLength(64);
+            expect(data.expiresAt.getTime()).toBeGreaterThan(Date.now());
+        });
+
+        it('returns a fresh access token for an active refresh session', async () => {
+            prisma.authSession.findUnique.mockResolvedValue({
+                id: 'session-1',
+                expiresAt: new Date(Date.now() + 60_000),
+                user,
+            });
+
+            const result = await service.refresh('refresh-token');
+
+            expect(result).toEqual({
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    avatarUrl: user.avatarUrl,
+                },
+                accessToken: 'signed-jwt-token',
+            });
+        });
+
+        it('deletes an expired refresh session and returns null', async () => {
+            prisma.authSession.findUnique.mockResolvedValue({
+                id: 'session-1',
+                expiresAt: new Date(Date.now() - 1),
+                user,
+            });
+
+            await expect(service.refresh('expired-token')).resolves.toBeNull();
+            expect(prisma.authSession.delete).toHaveBeenCalledWith({
+                where: { id: 'session-1' },
+            });
+        });
+
+        it('returns null for an unknown refresh token', async () => {
+            prisma.authSession.findUnique.mockResolvedValue(null);
+
+            await expect(service.refresh('unknown-token')).resolves.toBeNull();
+            expect(prisma.authSession.delete).not.toHaveBeenCalled();
+        });
+
+        it('revokes the matching refresh session', async () => {
+            await service.revokeRefreshSession('refresh-token');
+
+            const deleteMock = prisma.authSession.deleteMany as jest.Mock<
+                unknown,
+                [{ where: { tokenHash: string } }]
+            >;
+            expect(deleteMock.mock.calls[0][0].where.tokenHash).toMatch(/^[a-f0-9]{64}$/);
+        });
     });
 
     describe('register', () => {

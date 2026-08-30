@@ -40,6 +40,7 @@ async function bootstrap() {
 
     const allowedOrigins = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS ?? '');
     app.enableCors({
+        credentials: true,
         origin: (
             origin: string | undefined,
             callback: (err: Error | null, allow?: boolean) => void,
