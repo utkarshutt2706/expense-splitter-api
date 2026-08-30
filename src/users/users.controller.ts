@@ -17,11 +17,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { errorExample, ErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtPayload } from '../common/jwt-payload';
 import { BatchLookupUsersDto } from './dto/batch-lookup-users.dto';
-import { FriendResponseDto } from './dto/friend-response.dto';
 import { LookupUserDto } from './dto/lookup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { Friend, PublicUser, UsersService } from './users.service';
+import { PublicUser, UsersService } from './users.service';
 
 @ApiBearerAuth('access-token')
 @Controller('users')
@@ -53,28 +52,6 @@ export class UsersController {
     })
     lookup(@Query() dto: LookupUserDto): Promise<PublicUser[]> {
         return this.usersService.lookup(dto);
-    }
-
-    @Get('me/friends')
-    @ApiOperation({
-        summary: "List the caller's friends",
-        description:
-            'Derived, not stored: every user the caller has ever shared a group with (bidirectional, ' +
-            'deduplicated, survives being removed from the group later).',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'The friend list (may be empty).',
-        type: [FriendResponseDto],
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'Missing or invalid token.',
-        type: ErrorResponseDto,
-        example: errorExample('UNAUTHORIZED', 'Invalid or expired token'),
-    })
-    findFriends(@CurrentUser() user: JwtPayload): Promise<Friend[]> {
-        return this.usersService.findFriends(user.sub);
     }
 
     @Post('batch')

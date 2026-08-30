@@ -4,7 +4,6 @@ import { PublicUser, UsersService } from './users.service';
 
 type MockedUsersService = {
     lookup: jest.Mock;
-    findFriends: jest.Mock;
     findManyByIds: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
@@ -27,7 +26,6 @@ describe('UsersController', () => {
     beforeEach(() => {
         usersService = {
             lookup: jest.fn(),
-            findFriends: jest.fn(),
             findManyByIds: jest.fn(),
             findOne: jest.fn(),
             update: jest.fn(),
@@ -41,13 +39,6 @@ describe('UsersController', () => {
 
         await expect(controller.lookup({ query: 'utkar' })).resolves.toEqual([user]);
         expect(usersService.lookup).toHaveBeenCalledWith({ query: 'utkar' });
-    });
-
-    it('delegates findFriends to the service using the caller id', async () => {
-        usersService.findFriends.mockResolvedValue([user]);
-
-        await expect(controller.findFriends(currentUser)).resolves.toEqual([user]);
-        expect(usersService.findFriends).toHaveBeenCalledWith('user-1');
     });
 
     it('delegates findManyByIds to the service', async () => {
