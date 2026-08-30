@@ -11,12 +11,12 @@ export interface SettlementTransaction {
     amount: number;
 }
 
-interface ExpenseInput {
+export interface BalanceExpenseInput {
     paidByUserId: string;
     splits: { userId: string; amount: number }[];
 }
 
-interface PaymentInput {
+export interface BalancePaymentInput {
     fromUserId: string;
     toUserId: string;
     amount: number;
@@ -24,8 +24,8 @@ interface PaymentInput {
 
 export function calculateNetBalances(
     memberIds: string[],
-    expenses: ExpenseInput[],
-    payments: PaymentInput[],
+    expenses: BalanceExpenseInput[],
+    payments: BalancePaymentInput[],
 ): NetBalance[] {
     const centsByUser = new Map<string, number>(memberIds.map((userId) => [userId, 0]));
 

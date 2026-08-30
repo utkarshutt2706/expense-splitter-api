@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { mapBalanceInputs } from '../balances/balance-input-mapper';
 import { calculateNetBalances } from '../balances/balance-calculator';
+import { fromCents, toCents } from '../common/money';
 import { PrismaService } from '../prisma/prisma.service';
 import { DashboardResponseDto } from './dto/dashboard-response.dto';
 
@@ -36,7 +38,7 @@ export class DashboardService {
             >();
 
             for (const expense of group.expenses) {
-                const amount = this.toCents(expense.amount.toNumber());
+                const amount = toCents(expense.amount.toNumber());
                 const month = expense.paidOn.toISOString().slice(0, 7);
                 const date = expense.paidOn.toISOString().slice(0, 10);
                 const monthly = monthlySpend.get(month) ?? {
@@ -58,7 +60,7 @@ export class DashboardService {
                     daily.actualPaid += amount;
                 }
                 for (const split of expense.splits) {
-                    const splitCents = this.toCents(split.amount.toNumber());
+                    const splitCents = toCents(split.amount.toNumber());
                     shares.set(split.userId, (shares.get(split.userId) ?? 0) + splitCents);
                     if (split.userId === userId) {
                         shareCents += splitCents;
@@ -70,34 +72,25 @@ export class DashboardService {
                 dailySpend.set(date, daily);
             }
 
+            const balanceInputs = mapBalanceInputs(group.expenses, group.payments);
             const balances = calculateNetBalances(
                 group.members.map(({ userId: memberId }) => memberId),
-                group.expenses.map((expense) => ({
-                    paidByUserId: expense.paidByUserId,
-                    splits: expense.splits.map((split) => ({
-                        userId: split.userId,
-                        amount: split.amount.toNumber(),
-                    })),
-                })),
-                group.payments.map((payment) => ({
-                    fromUserId: payment.fromUserId,
-                    toUserId: payment.toUserId,
-                    amount: payment.amount.toNumber(),
-                })),
+                balanceInputs.expenses,
+                balanceInputs.payments,
             );
 
             return {
                 groupId: group.id,
                 name: group.name,
-                amount: this.fromCents(totalCents),
-                actualPaid: this.fromCents(paidCents),
-                currentUserShare: this.fromCents(shareCents),
+                amount: fromCents(totalCents),
+                actualPaid: fromCents(paidCents),
+                currentUserShare: fromCents(shareCents),
                 currentBalance: balances.find((entry) => entry.userId === userId)?.balance ?? 0,
                 memberShares: group.members
                     .map(({ user }) => ({
                         userId: user.id,
                         name: user.name,
-                        amount: this.fromCents(shares.get(user.id) ?? 0),
+                        amount: fromCents(shares.get(user.id) ?? 0),
                         isCurrentUser: user.id === userId,
                     }))
                     .sort(
@@ -107,17 +100,17 @@ export class DashboardService {
                 spendingByMonth: [...monthlySpend.entries()]
                     .map(([month, monthly]) => ({
                         month,
-                        amount: this.fromCents(monthly.amount),
-                        actualPaid: this.fromCents(monthly.actualPaid),
-                        currentUserShare: this.fromCents(monthly.currentUserShare),
+                        amount: fromCents(monthly.amount),
+                        actualPaid: fromCents(monthly.actualPaid),
+                        currentUserShare: fromCents(monthly.currentUserShare),
                     }))
                     .sort((left, right) => left.month.localeCompare(right.month)),
                 spendingByDay: [...dailySpend.entries()]
                     .map(([date, daily]) => ({
                         date,
-                        amount: this.fromCents(daily.amount),
-                        actualPaid: this.fromCents(daily.actualPaid),
-                        currentUserShare: this.fromCents(daily.currentUserShare),
+                        amount: fromCents(daily.amount),
+                        actualPaid: fromCents(daily.actualPaid),
+                        currentUserShare: fromCents(daily.currentUserShare),
                     }))
                     .sort((left, right) => left.date.localeCompare(right.date)),
             };
@@ -127,25 +120,14 @@ export class DashboardService {
             (left, right) => right.amount - left.amount || left.name.localeCompare(right.name),
         );
         return {
-            actualPaid: this.fromCents(
-                groupSummaries.reduce((sum, group) => sum + this.toCents(group.actualPaid), 0),
+            actualPaid: fromCents(
+                groupSummaries.reduce((sum, group) => sum + toCents(group.actualPaid), 0),
             ),
-            currentUserShare: this.fromCents(
-                groupSummaries.reduce(
-                    (sum, group) => sum + this.toCents(group.currentUserShare),
-                    0,
-                ),
+            currentUserShare: fromCents(
+                groupSummaries.reduce((sum, group) => sum + toCents(group.currentUserShare), 0),
             ),
             groupSpend: groupSummaries,
         };
-    }
-
-    private toCents(value: number): number {
-        return Math.round(value * 100);
-    }
-
-    private fromCents(value: number): number {
-        return value / 100;
     }
 
     private dateRange(from?: string, to?: string): { paidOn?: { gte: Date; lt: Date } } {

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { mapBalanceInputs } from './balance-input-mapper';
 import { calculateNetBalances, simplifyDebts } from './balance-calculator';
 import { GroupBalancesResponseDto } from './dto/group-balances-response.dto';
 
@@ -29,20 +30,11 @@ export class BalancesService {
         ]);
 
         const memberIds = group.members.map((member) => member.userId);
+        const balanceInputs = mapBalanceInputs(expenses, payments);
         const balances = calculateNetBalances(
             memberIds,
-            expenses.map((expense) => ({
-                paidByUserId: expense.paidByUserId,
-                splits: expense.splits.map((split) => ({
-                    userId: split.userId,
-                    amount: split.amount.toNumber(),
-                })),
-            })),
-            payments.map((payment) => ({
-                fromUserId: payment.fromUserId,
-                toUserId: payment.toUserId,
-                amount: payment.amount.toNumber(),
-            })),
+            balanceInputs.expenses,
+            balanceInputs.payments,
         );
 
         return { balances, settlements: simplifyDebts(balances) };
