@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { BalancesService } from '../balances/balances.service';
+import { mapBalanceInputs } from '../balances/balance-input-mapper';
 import { calculateNetBalances } from '../balances/balance-calculator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -77,20 +78,11 @@ export class GroupsService {
 
         return groups.map((group) => {
             const memberIds = group.members.map((member) => member.userId);
+            const balanceInputs = mapBalanceInputs(group.expenses, group.payments);
             const balances = calculateNetBalances(
                 memberIds,
-                group.expenses.map((expense) => ({
-                    paidByUserId: expense.paidByUserId,
-                    splits: expense.splits.map((split) => ({
-                        userId: split.userId,
-                        amount: split.amount.toNumber(),
-                    })),
-                })),
-                group.payments.map((payment) => ({
-                    fromUserId: payment.fromUserId,
-                    toUserId: payment.toUserId,
-                    amount: payment.amount.toNumber(),
-                })),
+                balanceInputs.expenses,
+                balanceInputs.payments,
             );
             const activityDates = [
                 ...group.expenses.map((expense) => expense.createdAt),
