@@ -1,14 +1,7 @@
-import {
-    BadRequestException,
-    ConflictException,
-    Injectable,
-    NotFoundException,
-    UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
 import { JwtPayload } from '../common/jwt-payload';
-import { hashInvitationToken } from '../invitations/invitation-token';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenResponseDto } from './dto/auth-token-response.dto';
 import { AuthUserResponseDto } from './dto/auth-user-response.dto';
@@ -29,35 +22,15 @@ export class AuthService {
 
         const passwordHash = await hashPassword(dto.password);
 
-        const user = await this.prisma.$transaction(async (tx) => {
-            const invitation = dto.inviteToken
-                ? await this.validateInvitationForRegistration(tx, dto.inviteToken, dto.email)
-                : null;
-
-            let created: Omit<User, 'passwordHash'>;
-            try {
-                created = await tx.user.create({
-                    data: { name: dto.name, email: dto.email, phone, passwordHash },
-                    omit: { passwordHash: true },
-                });
-            } catch (error) {
-                throw this.mapPrismaError(error);
-            }
-
-            if (invitation) {
-                await tx.groupMember.upsert({
-                    where: { groupId_userId: { groupId: invitation.groupId, userId: created.id } },
-                    create: { groupId: invitation.groupId, userId: created.id },
-                    update: { leftAt: null },
-                });
-                await tx.groupInvitation.update({
-                    where: { id: invitation.id },
-                    data: { status: 'accepted', acceptedAt: new Date() },
-                });
-            }
-
-            return created;
-        });
+        let user: Omit<User, 'passwordHash'>;
+        try {
+            user = await this.prisma.user.create({
+                data: { name: dto.name, email: dto.email, phone, passwordHash },
+                omit: { passwordHash: true },
+            });
+        } catch (error) {
+            throw this.mapPrismaError(error);
+        }
 
         return this.toTokenResponse(user);
     }
@@ -87,26 +60,6 @@ export class AuthService {
 
         const passwordHash = await hashPassword(dto.newPassword);
         await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-    }
-
-    private async validateInvitationForRegistration(
-        tx: Prisma.TransactionClient,
-        rawToken: string,
-        registeringEmail: string,
-    ) {
-        const invitation = await tx.groupInvitation.findUnique({
-            where: { tokenHash: hashInvitationToken(rawToken) },
-        });
-        if (!invitation) {
-            throw new NotFoundException('Invitation not found');
-        }
-        if (invitation.status !== 'pending' || invitation.expiresAt < new Date()) {
-            throw new ConflictException('This invitation is no longer valid');
-        }
-        if (invitation.email.toLowerCase() !== registeringEmail.toLowerCase()) {
-            throw new BadRequestException('Email does not match the invitation');
-        }
-        return invitation;
     }
 
     private async toTokenResponse(user: Omit<User, 'passwordHash'>): Promise<AuthTokenResponseDto> {

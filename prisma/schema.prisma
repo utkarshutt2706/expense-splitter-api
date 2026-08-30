@@ -20,7 +20,6 @@ model User {
   expenseSplits       ExpenseSplit[]
   paymentsSent        Payment[]         @relation("PaymentFrom")
   paymentsReceived    Payment[]         @relation("PaymentTo")
-  invitationsSent     GroupInvitation[] @relation("InvitationInvitedBy")
 
   @@map("users")
 }
@@ -33,7 +32,6 @@ model Group {
   members     GroupMember[]
   expenses    Expense[]
   payments    Payment[]
-  invitations GroupInvitation[]
 
   @@map("groups")
 }
@@ -48,32 +46,6 @@ model GroupMember {
 
   @@id([groupId, userId])
   @@map("group_members")
-}
-
-enum InvitationStatus {
-  pending
-  accepted
-  revoked
-
-  @@map("invitation_status")
-}
-
-model GroupInvitation {
-  id              String            @id @default(uuid())
-  groupId         String
-  email           String
-  invitedByUserId String
-  tokenHash       String            @unique
-  status          InvitationStatus  @default(pending)
-  expiresAt       DateTime
-  acceptedAt      DateTime?
-  revokedAt       DateTime?
-  createdAt       DateTime          @default(now())
-
-  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  invitedBy User  @relation("InvitationInvitedBy", fields: [invitedByUserId], references: [id])
-
-  @@map("group_invitations")
 }
 
 enum SplitType {

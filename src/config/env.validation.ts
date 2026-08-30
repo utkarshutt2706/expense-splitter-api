@@ -7,9 +7,6 @@ export const envSchema = z.object({
     CORS_ALLOWED_ORIGINS: z.string().min(1),
     API_KEY: z.string().min(16),
     JWT_SECRET: z.string().min(32),
-    FRONTEND_URL: z.url(),
-    GMAIL_USER: z.email(),
-    GMAIL_APP_PASSWORD: z.string().min(1),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

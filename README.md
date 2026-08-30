@@ -45,27 +45,18 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 3. **Generate two secrets** — `API_KEY` (gates the `/docs` page) and `JWT_SECRET`
    (signs auth tokens). Anything long, random, and different from each other works,
    e.g. `openssl rand -hex 32` run twice.
-4. **Generate a Gmail App Password** — group invitation emails send through Gmail's
-   SMTP relay using your own Gmail account, so no domain or third-party mail
-   provider is needed. This requires 2-Step Verification to be turned on for the
-   Google account first (**myaccount.google.com/security**), then generate an App
-   Password at **myaccount.google.com/apppasswords**. `GMAIL_USER` is that Gmail
-   address; `GMAIL_APP_PASSWORD` is the 16-character password it generates (spaces
-   don't matter). Regular Gmail accounts are capped at 500 sends/day, which is
-   fine at this scale.
-5. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
+4. **Deploy to Render.** Sign up at [render.com](https://render.com) (free tier),
    click **New +** → **Blueprint**, and connect your fork. Render reads
    [`render.yaml`](render.yaml) automatically and provisions the service — build
    command, start command, region, and plan are all already defined there. You'll be
-   prompted for the five secrets it doesn't store in the file: `DATABASE_URL` (from
-   step 2), `API_KEY` and `JWT_SECRET` (from step 3), and `GMAIL_USER` and
-   `GMAIL_APP_PASSWORD` (from step 4).
-6. **Note your service URL** once it's live (something like
+   prompted for the three secrets it doesn't store in the file: `DATABASE_URL`
+   (from step 2), plus `API_KEY` and `JWT_SECRET` (from step 3).
+5. **Note your service URL** once it's live (something like
    `https://your-app.onrender.com`) — the frontend needs it.
-7. **Deploy the frontend.** Fork
+6. **Deploy the frontend.** Fork
    [expense-splitter](https://github.com/utkarshutt2706/expense-splitter) and follow
    its own README, pointing it at your backend's URL.
-8. If your frontend ends up on a different origin than the default
+7. If your frontend ends up on a different origin than the default
    `CORS_ALLOWED_ORIGINS` value in `render.yaml`, update it (in the file or directly
    in Render's dashboard under Environment) to match — otherwise the browser will
    block requests to your API.
@@ -135,13 +126,25 @@ JSON.
 - `DATABASE_URL`
 - `CORS_ALLOWED_ORIGINS`
 - `NODE_ENV`
-- `FRONTEND_URL` — base URL the invitation email's accept link points at
 - `API_KEY` — password for the `/docs` Basic Auth gate (see above)
 - `JWT_SECRET` — signs and verifies auth tokens; must be long and random, and
   different from `API_KEY`
-- `GMAIL_USER` — the Gmail address group invitation emails are sent from (see above)
-- `GMAIL_APP_PASSWORD` — that account's App Password, generated at
-  myaccount.google.com/apppasswords (requires 2-Step Verification)
+
+## Restoring the removed invitation feature
+
+Email-based group invitations were removed because the deployed free-tier setup could
+not provide reliable email delivery. The complete backend implementation remains in
+Git history at commit `9d0a88ac43a936d7b4eda797ca071fbf7f85c045`, dated
+2026-08-30. That snapshot includes the API endpoints, token flow, SMTP mailer, tests,
+Prisma model, and deployment configuration.
+
+To inspect or recover individual files without changing branches, use
+`git show 9d0a88ac43a936d7b4eda797ca071fbf7f85c045:path/to/file`. To restore the
+entire implementation on a new branch, start from that commit with
+`git switch -c restore/invitations 9d0a88ac43a936d7b4eda797ca071fbf7f85c045`, then
+reapply later changes as needed. The historical migration that originally introduced
+the invitation table is intentionally retained; the later removal migration drops it
+from active databases.
 
 ## Optional: code quality gate (SonarCloud)
 

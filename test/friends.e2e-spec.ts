@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { MailService } from '../src/mail/mail.service';
 import { createTestApp } from './utils/create-test-app';
 
 interface AuthResponse {
@@ -13,7 +12,7 @@ interface AuthResponse {
 async function registerUser(
     app: INestApplication<App>,
     name: string,
-    overrides: { email?: string; inviteToken?: string } = {},
+    overrides: { email?: string } = {},
 ): Promise<AuthResponse> {
     const email = overrides.email ?? `${randomUUID()}@example.com`;
     const response = await request(app.getHttpServer())
@@ -23,25 +22,15 @@ async function registerUser(
             email,
             password: 'correct-horse-battery-staple',
             phone: `9${String(Math.random()).slice(2, 11)}`.slice(0, 10),
-            inviteToken: overrides.inviteToken,
         })
         .expect(201);
     return response.body as AuthResponse;
 }
 
-function extractInviteToken(inviteUrl: string): string {
-    const token = new URL(inviteUrl).searchParams.get('invite');
-    if (!token) {
-        throw new Error(`No invite token found in URL: ${inviteUrl}`);
-    }
-    return token;
-}
-
-describe('Friends and invitations (e2e)', () => {
+describe('Friends (e2e)', () => {
     let app: INestApplication<App>;
     let userA: AuthResponse;
     let userB: AuthResponse;
-    let userC: AuthResponse;
     let groupId: string;
 
     beforeAll(async () => {
@@ -56,7 +45,7 @@ describe('Friends and invitations (e2e)', () => {
                 .delete(`/groups/${groupId}`)
                 .set('Authorization', `Bearer ${userA.accessToken}`);
         }
-        for (const user of [userA, userB, userC]) {
+        for (const user of [userA, userB]) {
             if (!user) continue;
             await request(app.getHttpServer())
                 .delete(`/users/${user.user.id}`)
@@ -124,70 +113,18 @@ describe('Friends and invitations (e2e)', () => {
         expect((friendsOfB.body as { id: string }[]).map((u) => u.id)).toEqual([userA.user.id]);
     });
 
-    it('invites an unregistered email, and the invited person registers and auto-joins', async () => {
-        const unregisteredEmail = `${randomUUID()}@example.com`;
-        const mailService = app.get(MailService);
-        const sendSpy = jest.spyOn(mailService, 'sendInvitationEmail');
-
-        const createResponse = await request(app.getHttpServer())
-            .post(`/groups/${groupId}/invitations`)
-            .set('Authorization', `Bearer ${userA.accessToken}`)
-            .send({ email: unregisteredEmail })
-            .expect(201);
-        expect((createResponse.body as { status: string }).status).toBe('pending');
-
-        expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ to: unregisteredEmail }));
-        const inviteUrl = (sendSpy.mock.calls[0][0] as { inviteUrl: string }).inviteUrl;
-        const rawToken = extractInviteToken(inviteUrl);
-
-        const validateResponse = await request(app.getHttpServer())
-            .get(`/invitations/${rawToken}`)
-            .expect(200);
-        expect(validateResponse.body).toEqual({
-            email: unregisteredEmail,
-            group: { id: groupId, name: 'Goa Trip' },
-            inviterName: 'Alice',
-        });
-
-        userC = await registerUser(app, 'Charlie', {
-            email: unregisteredEmail,
-            inviteToken: rawToken,
-        });
-
-        const groupResponse = await request(app.getHttpServer())
-            .get(`/groups/${groupId}`)
-            .set('Authorization', `Bearer ${userA.accessToken}`)
-            .expect(200);
-        expect((groupResponse.body as { memberIds: string[] }).memberIds).toContain(userC.user.id);
-
-        const friendsOfA = await request(app.getHttpServer())
-            .get('/users/me/friends')
-            .set('Authorization', `Bearer ${userA.accessToken}`)
-            .expect(200);
-        expect((friendsOfA.body as { id: string }[]).map((u) => u.id).sort()).toEqual(
-            [userB.user.id, userC.user.id].sort(),
-        );
-
-        // The invitation is consumed: re-validating the same token now fails.
-        await request(app.getHttpServer()).get(`/invitations/${rawToken}`).expect(409);
-
-        sendSpy.mockRestore();
-    });
-
     it('stops counting a former group member as a friend', async () => {
         await request(app.getHttpServer())
             .patch(`/groups/${groupId}`)
             .set('Authorization', `Bearer ${userA.accessToken}`)
-            .send({ memberIds: [userA.user.id, userC.user.id] })
+            .send({ memberIds: [userA.user.id] })
             .expect(200);
 
         const friendsOfA = await request(app.getHttpServer())
             .get('/users/me/friends')
             .set('Authorization', `Bearer ${userA.accessToken}`)
             .expect(200);
-        expect(friendsOfA.body).toEqual([
-            expect.objectContaining({ id: userC.user.id, sharedGroupCount: 1 }),
-        ]);
+        expect(friendsOfA.body).toEqual([]);
 
         const friendsOfB = await request(app.getHttpServer())
             .get('/users/me/friends')

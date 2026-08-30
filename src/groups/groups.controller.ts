@@ -140,8 +140,8 @@ export class GroupsController {
     @ApiOperation({
         summary: 'Delete a group',
         description:
-            "Cascades: deletes the group's memberships, expenses, expense splits, payments, and " +
-            'invitations too. Every member must have a zero balance first.',
+            "Cascades: deletes the group's memberships, expenses, expense splits, and payments. " +
+            'Every member must have a zero balance first.',
     })
     @ApiResponse({ status: 204, description: 'Deleted.' })
     @ApiResponse({

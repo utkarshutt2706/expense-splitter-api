@@ -18,16 +18,12 @@ export class AuthController {
     @Post('register')
     @ApiOperation({
         summary: 'Register a new account',
-        description:
-            'Creates a User and returns a ready-to-use accessToken, same shape as Login. Pass ' +
-            'inviteToken (from a group invitation link) to atomically join that group as part of ' +
-            'registration -- the invitation email must match the email you register with.',
+        description: 'Creates a User and returns a ready-to-use accessToken, same shape as Login.',
     })
     @ApiResponse({ status: 201, description: 'Account created.', type: AuthTokenResponseDto })
     @ApiResponse({
         status: 400,
-        description:
-            'Validation error, or (with inviteToken) the email does not match the invitation.',
+        description: 'Validation error.',
         type: ErrorResponseDto,
         examples: {
             validation: {
@@ -37,34 +33,13 @@ export class AuthController {
                     'Email must be an email; Password must be longer than or equal to 8 characters; Name must be a string',
                 ),
             },
-            invitationEmailMismatch: {
-                summary: 'inviteToken email mismatch',
-                value: errorExample('VALIDATION_ERROR', 'Email does not match the invitation'),
-            },
         },
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'inviteToken does not match any invitation.',
-        type: ErrorResponseDto,
-        example: errorExample('NOT_FOUND', 'Invitation not found'),
     })
     @ApiResponse({
         status: 409,
-        description:
-            'Email already registered, or (with inviteToken) the invitation is expired, revoked, ' +
-            'or already accepted.',
+        description: 'Email already registered.',
         type: ErrorResponseDto,
-        examples: {
-            emailAlreadyRegistered: {
-                summary: 'Email already registered',
-                value: errorExample('CONFLICT', 'A user with this email already exists'),
-            },
-            invitationNoLongerValid: {
-                summary: 'Invitation expired, revoked, or already accepted',
-                value: errorExample('CONFLICT', 'This invitation is no longer valid'),
-            },
-        },
+        example: errorExample('CONFLICT', 'A user with this email already exists'),
     })
     register(@Body() dto: RegisterDto): Promise<AuthTokenResponseDto> {
         return this.authService.register(dto);

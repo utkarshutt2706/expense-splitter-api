@@ -56,7 +56,7 @@ describe('ControllerErrorLoggingInterceptor', () => {
         const error = new Error('database failure');
         const request: MockRequest = {
             method: 'POST',
-            path: '/auth/register?inviteToken=secret',
+            path: '/auth/register?password=secret',
             route: { path: '/auth/register' },
         };
 
