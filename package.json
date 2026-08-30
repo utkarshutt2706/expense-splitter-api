@@ -12,6 +12,7 @@
     "scripts": {
         "postinstall": "prisma generate",
         "build": "nest build",
+        "generate:openapi": "pnpm build && node scripts/generate-openapi.mjs && prettier --write openapi.json",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"prisma.config.ts\"",
         "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"prisma.config.ts\"",
         "start": "nest start",
@@ -27,7 +28,7 @@
         "test:e2e": "jest --config ./test/jest-e2e.json",
         "prisma:migrate:dev": "prisma migrate dev",
         "prisma:migrate:deploy": "prisma migrate deploy",
-        "verify": "pnpm format:check && pnpm lint && pnpm build && pnpm test:cov"
+        "verify": "pnpm format:check && pnpm lint && pnpm build && node scripts/generate-openapi.mjs --check && pnpm test:cov"
     },
     "dependencies": {
         "@nestjs/common": "^11.2.1",

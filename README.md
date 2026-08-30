@@ -117,6 +117,11 @@ using the `API_KEY` value as the password (username is ignored; this is the only
 remaining use of `API_KEY`, unrelated to the main API's auth). Browsers will prompt
 for credentials automatically on first visit.
 
+The committed [`openapi.json`](openapi.json) is the source used to generate frontend
+transport types. Run `pnpm generate:openapi` after changing a controller or DTO. The
+command builds the API first so the Nest Swagger compiler plugin can contribute its
+metadata; it uses placeholder configuration and does not connect to a database.
+
 There's also a Postman collection at
 [`postman/expense-splitter-api.postman_collection.json`](postman/expense-splitter-api.postman_collection.json) —
 import it directly into Postman, set the `baseUrl` collection variable, then run
