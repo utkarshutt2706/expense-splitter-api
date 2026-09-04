@@ -1,23 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Expense, ExpenseSplit, Prisma, SplitType } from '@prisma/client';
+import { Expense, ExpenseSplit, Prisma } from '@prisma/client';
 import { assertActiveGroupParticipants } from '../common/group-participants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { ExpenseResponseDto } from './dto/expense-response.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
-import {
-    Split,
-    calculateEqualSplit,
-    calculatePercentageSplit,
-    calculateSharesSplit,
-    splitsReconcile,
-    sumAmounts,
-} from './split-calculator';
+import { expenseParticipantUserIds, validateExpenseSplits } from './expense-split-validator';
 
 type ExpenseWithSplits = Expense & { splits: ExpenseSplit[] };
-
-const RECONCILE_TOLERANCE_CENTS = 1;
-const PERCENTAGE_SUM_TOLERANCE = 0.01;
 
 @Injectable()
 export class ExpensesService {
@@ -28,10 +18,9 @@ export class ExpensesService {
         dto: CreateExpenseDto,
         createdByUserId = dto.paidByUserId,
     ): Promise<ExpenseResponseDto> {
-        await assertActiveGroupParticipants(this.prisma, groupId, this.participantUserIds(dto));
+        await assertActiveGroupParticipants(this.prisma, groupId, expenseParticipantUserIds(dto));
 
-        const submitted: Split[] = dto.splits;
-        this.validateSplits(dto);
+        validateExpenseSplits(dto);
         const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
@@ -45,7 +34,7 @@ export class ExpensesService {
                     splitType: dto.splitType,
                     paidOn,
                     splits: {
-                        create: submitted.map((split) => ({
+                        create: dto.splits.map((split) => ({
                             userId: split.userId,
                             amount: split.amount,
                         })),
@@ -83,8 +72,8 @@ export class ExpensesService {
 
     async update(groupId: string, id: string, dto: UpdateExpenseDto): Promise<ExpenseResponseDto> {
         await this.findOne(groupId, id);
-        await assertActiveGroupParticipants(this.prisma, groupId, this.participantUserIds(dto));
-        this.validateSplits(dto);
+        await assertActiveGroupParticipants(this.prisma, groupId, expenseParticipantUserIds(dto));
+        validateExpenseSplits(dto);
         const paidOn = dto.paidOn ? new Date(dto.paidOn) : new Date();
 
         try {
@@ -121,62 +110,6 @@ export class ExpensesService {
             await this.prisma.expense.delete({ where: { id } });
         } catch (error) {
             throw this.mapPrismaError(error, id);
-        }
-    }
-
-    private validateSplits(dto: CreateExpenseDto): void {
-        if (dto.splitType === SplitType.exact) {
-            const total = sumAmounts(dto.splits);
-            if (Math.round(total * 100) !== Math.round(dto.amount * 100)) {
-                throw new BadRequestException(
-                    'splits do not sum to the expense amount for an exact split',
-                );
-            }
-            return;
-        }
-
-        const computed = this.computeExpectedSplits(dto);
-        if (!splitsReconcile(dto.splits, computed, RECONCILE_TOLERANCE_CENTS)) {
-            throw new BadRequestException(
-                'submitted splits do not reconcile with the server-computed split',
-            );
-        }
-    }
-
-    private participantUserIds(dto: CreateExpenseDto): string[] {
-        return [
-            dto.paidByUserId,
-            ...dto.splits.map((split) => split.userId),
-            ...(dto.percentages?.map((entry) => entry.userId) ?? []),
-            ...(dto.shares?.map((entry) => entry.userId) ?? []),
-        ];
-    }
-
-    private computeExpectedSplits(dto: CreateExpenseDto): Split[] {
-        switch (dto.splitType) {
-            case SplitType.equal:
-                return calculateEqualSplit(
-                    dto.amount,
-                    dto.splits.map((split) => split.userId),
-                );
-            case SplitType.percentage: {
-                if (!dto.percentages || dto.percentages.length === 0) {
-                    throw new BadRequestException('percentages is required for a percentage split');
-                }
-                const total = dto.percentages.reduce((sum, entry) => sum + entry.percentage, 0);
-                if (Math.abs(total - 100) > PERCENTAGE_SUM_TOLERANCE) {
-                    throw new BadRequestException('percentages must sum to 100');
-                }
-                return calculatePercentageSplit(dto.amount, dto.percentages);
-            }
-            case SplitType.shares: {
-                if (!dto.shares || dto.shares.length === 0) {
-                    throw new BadRequestException('shares is required for a shares split');
-                }
-                return calculateSharesSplit(dto.amount, dto.shares);
-            }
-            default:
-                throw new BadRequestException(`Unsupported split type: ${String(dto.splitType)}`);
         }
     }
 
