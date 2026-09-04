@@ -52,8 +52,132 @@
     "item": [
         {
             "name": "Health",
-            "description": "Uptime check. Public -- no auth required.",
+            "description": "Liveness, readiness, and aggregate health checks. No auth required.",
             "item": [
+                {
+                    "name": "Check process liveness",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/liveness",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "liveness"
+                            ]
+                        },
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "description": "Process-only probe. Use this endpoint for external keep-awake monitoring."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/liveness",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "liveness"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"status\": \"ok\",\n    \"timestamp\": \"2026-01-01T00:00:00.000Z\",\n    \"uptimeSeconds\": 120,\n    \"checks\": {\n        \"application\": {\n            \"status\": \"up\"\n        }\n    }\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Check traffic readiness",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/readiness",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "readiness"
+                            ]
+                        },
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "description": "Dependency-aware probe used by Render to decide whether the API can serve traffic."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/readiness",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "readiness"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "noauth"
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "cookie": [],
+                            "body": "{\n    \"status\": \"ok\",\n    \"timestamp\": \"2026-01-01T00:00:00.000Z\",\n    \"uptimeSeconds\": 120,\n    \"checks\": {\n        \"application\": {\n            \"status\": \"up\"\n        },\n        \"database\": {\n            \"status\": \"up\",\n            \"responseTimeMs\": 3\n        }\n    }\n}"
+                        }
+                    ]
+                },
                 {
                     "name": "Check API health",
                     "request": {
@@ -76,7 +200,7 @@
                         "auth": {
                             "type": "noauth"
                         },
-                        "description": "Always public. Useful as an uptime pinger target since Render's free tier spins the service down after idling."
+                        "description": "Backward-compatible aggregate health check."
                     },
                     "response": [
                         {
@@ -112,7 +236,7 @@
                                 }
                             ],
                             "cookie": [],
-                            "body": "{\n    \"status\": \"ok\"\n}"
+                            "body": "{\n    \"status\": \"ok\",\n    \"timestamp\": \"2026-01-01T00:00:00.000Z\",\n    \"uptimeSeconds\": 120,\n    \"checks\": {\n        \"application\": {\n            \"status\": \"up\"\n        },\n        \"database\": {\n            \"status\": \"up\",\n            \"responseTimeMs\": 3\n        }\n    }\n}"
                         }
                     ]
                 }

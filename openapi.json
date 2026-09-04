@@ -2290,21 +2290,59 @@
                 "tags": ["Friends"]
             }
         },
-        "/health": {
+        "/liveness": {
             "get": {
-                "description": "Always public. Returns 200 only when the API can query its database.",
-                "operationId": "HealthController_check",
+                "description": "Always public. Confirms that the API process is running without checking external dependencies.",
+                "operationId": "HealthController_liveness",
                 "parameters": [],
                 "responses": {
                     "200": {
-                        "description": "Service is up.",
+                        "description": "API process is alive.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "example": {
                                         "status": "ok",
+                                        "timestamp": "2026-01-01T00:00:00.000Z",
+                                        "uptimeSeconds": 120,
                                         "checks": {
-                                            "database": "up"
+                                            "application": {
+                                                "status": "up"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Process liveness probe",
+                "tags": ["Health"]
+            }
+        },
+        "/readiness": {
+            "get": {
+                "description": "Always public. Returns 200 only when the API and all dependencies required to serve traffic are available.",
+                "operationId": "HealthController_readiness",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "API is ready for traffic.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "example": {
+                                        "status": "ok",
+                                        "timestamp": "2026-01-01T00:00:00.000Z",
+                                        "uptimeSeconds": 120,
+                                        "checks": {
+                                            "application": {
+                                                "status": "up"
+                                            },
+                                            "database": {
+                                                "status": "up",
+                                                "responseTimeMs": 3
+                                            }
                                         }
                                     }
                                 }
@@ -2315,33 +2353,44 @@
                         "description": "A required dependency is unavailable."
                     }
                 },
-                "summary": "Database health check",
+                "summary": "Traffic readiness probe",
                 "tags": ["Health"]
             }
         },
-        "/readiness": {
+        "/health": {
             "get": {
-                "description": "Always public. Confirms that the API process can handle requests without querying external dependencies.",
-                "operationId": "HealthController_readiness",
+                "description": "Always public. Backward-compatible aggregate check of the API and its required dependencies.",
+                "operationId": "HealthController_health",
                 "parameters": [],
                 "responses": {
                     "200": {
-                        "description": "API process is responsive.",
+                        "description": "Service is healthy.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "example": {
                                         "status": "ok",
+                                        "timestamp": "2026-01-01T00:00:00.000Z",
+                                        "uptimeSeconds": 120,
                                         "checks": {
-                                            "system": "up"
+                                            "application": {
+                                                "status": "up"
+                                            },
+                                            "database": {
+                                                "status": "up",
+                                                "responseTimeMs": 3
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The service is unhealthy."
                     }
                 },
-                "summary": "System readiness check",
+                "summary": "Aggregate health check",
                 "tags": ["Health"]
             }
         }

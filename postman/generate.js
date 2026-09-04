@@ -120,17 +120,52 @@ const GROUP_ID = 'group-daaru-party';
 // =====================================================================
 const healthFolder = {
     name: 'Health',
-    description: 'Uptime check. Public -- no auth required.',
+    description: 'Liveness, readiness, and aggregate health checks. No auth required.',
     item: [
+        item(
+            'Check process liveness',
+            req('GET', '/liveness', { noAuth: true }),
+            [
+                example('200 OK', req('GET', '/liveness', { noAuth: true }), 'OK', 200, {
+                    status: 'ok',
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    uptimeSeconds: 120,
+                    checks: { application: { status: 'up' } },
+                }),
+            ],
+            'Process-only probe. Use this endpoint for external keep-awake monitoring.',
+        ),
+        item(
+            'Check traffic readiness',
+            req('GET', '/readiness', { noAuth: true }),
+            [
+                example('200 OK', req('GET', '/readiness', { noAuth: true }), 'OK', 200, {
+                    status: 'ok',
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    uptimeSeconds: 120,
+                    checks: {
+                        application: { status: 'up' },
+                        database: { status: 'up', responseTimeMs: 3 },
+                    },
+                }),
+            ],
+            'Dependency-aware probe used by Render to decide whether the API can serve traffic.',
+        ),
         item(
             'Check API health',
             req('GET', '/health', { noAuth: true }),
             [
                 example('200 OK', req('GET', '/health', { noAuth: true }), 'OK', 200, {
                     status: 'ok',
+                    timestamp: '2026-01-01T00:00:00.000Z',
+                    uptimeSeconds: 120,
+                    checks: {
+                        application: { status: 'up' },
+                        database: { status: 'up', responseTimeMs: 3 },
+                    },
                 }),
             ],
-            "Always public. Useful as an uptime pinger target since Render's free tier spins the service down after idling.",
+            'Backward-compatible aggregate health check.',
         ),
     ],
 };
