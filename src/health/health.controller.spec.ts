@@ -1,59 +1,57 @@
-import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../prisma/prisma.service';
 import { HealthController } from './health.controller';
+import { HealthResponse, HealthService, LivenessResponse } from './health.service';
 
 describe('HealthController', () => {
     let controller: HealthController;
-    let queryRaw: jest.Mock;
-    let logSpy: jest.SpyInstance;
+    let healthService: jest.Mocked<HealthService>;
+    let livenessMock: jest.Mock;
+    let readinessMock: jest.Mock;
+    let healthMock: jest.Mock;
+
+    const liveness: LivenessResponse = {
+        status: 'ok',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        uptimeSeconds: 120,
+        checks: { application: { status: 'up' } },
+    };
+    const health: HealthResponse = {
+        ...liveness,
+        checks: {
+            application: { status: 'up' },
+            database: { status: 'up', responseTimeMs: 3 },
+        },
+    };
 
     beforeEach(async () => {
-        logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
-        queryRaw = jest.fn().mockResolvedValue([{ '?column?': 1 }]);
+        livenessMock = jest.fn().mockReturnValue(liveness);
+        readinessMock = jest.fn().mockResolvedValue(health);
+        healthMock = jest.fn().mockResolvedValue(health);
+        healthService = {
+            liveness: livenessMock,
+            readiness: readinessMock,
+            health: healthMock,
+        } as unknown as jest.Mocked<HealthService>;
         const module: TestingModule = await Test.createTestingModule({
             controllers: [HealthController],
-            providers: [{ provide: PrismaService, useValue: { $queryRaw: queryRaw } }],
+            providers: [{ provide: HealthService, useValue: healthService }],
         }).compile();
 
-        controller = module.get<HealthController>(HealthController);
+        controller = module.get(HealthController);
     });
 
-    afterEach(() => {
-        jest.restoreAllMocks();
-        jest.useRealTimers();
+    it('delegates the liveness probe', () => {
+        expect(controller.liveness()).toEqual(liveness);
+        expect(livenessMock).toHaveBeenCalledTimes(1);
     });
 
-    it('reports the API and database as healthy', async () => {
-        await expect(controller.check()).resolves.toEqual({
-            status: 'ok',
-            checks: { database: 'up' },
-        });
-        expect(queryRaw).toHaveBeenCalledTimes(1);
-        expect(logSpy).toHaveBeenCalledWith('Health check passed: database is reachable');
+    it('delegates the readiness probe', async () => {
+        await expect(controller.readiness()).resolves.toEqual(health);
+        expect(readinessMock).toHaveBeenCalledTimes(1);
     });
 
-    it('reports the API process as ready without querying the database', () => {
-        expect(controller.readiness()).toEqual({
-            status: 'ok',
-            checks: { system: 'up' },
-        });
-        expect(queryRaw).not.toHaveBeenCalled();
-    });
-
-    it('reports unavailable when the database query fails', async () => {
-        queryRaw.mockRejectedValue(new Error('connection refused'));
-
-        await expect(controller.check()).rejects.toThrow(ServiceUnavailableException);
-    });
-
-    it('reports unavailable when the database query times out', async () => {
-        jest.useFakeTimers();
-        queryRaw.mockReturnValue(new Promise(() => undefined));
-
-        const result = expect(controller.check()).rejects.toThrow(ServiceUnavailableException);
-        await jest.advanceTimersByTimeAsync(3_000);
-
-        await result;
+    it('delegates the aggregate health check', async () => {
+        await expect(controller.health()).resolves.toEqual(health);
+        expect(healthMock).toHaveBeenCalledTimes(1);
     });
 });

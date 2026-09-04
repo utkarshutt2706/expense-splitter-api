@@ -20,8 +20,8 @@ it's free and takes about ten minutes. See below.
 
 ## Features
 
-- JWT-based registration and login, gating every endpoint except `/health` and
-  `/readiness`
+- JWT-based registration and login, gating every endpoint except `/health`,
+  `/liveness`, and `/readiness`
 - Users and friends CRUD with unique contact validation
 - Groups CRUD, with a single partial-update endpoint for rename and membership
   changes (membership replacement is a full `memberIds` array, not a delta).
@@ -33,7 +33,7 @@ it's free and takes about ten minutes. See below.
   get-by-id/update/delete)
 - Group balances: net balance per member and a Simplify Debt–minimized settlement
   list, computed from expenses and payments together
-- Separate process-readiness and database-aware health-check endpoints
+- Separate process-liveness, traffic-readiness, and aggregate health-check endpoints
 
 ## Deploy your own instance
 
@@ -63,15 +63,17 @@ Everything here runs on free tiers — no cost to run your own copy for a friend
 
 Database schema migrations run automatically as part of the app's start command
 (`pnpm prisma:migrate:deploy`, ahead of every boot) — nothing extra to configure.
-Render's free tier spins the service down after inactivity. A scheduled GitHub Actions
-probe calls the public `/readiness` endpoint every five minutes during expected usage
-hours to keep the API process warm without querying PostgreSQL, leaving an overnight
-idle window from approximately 04:00 to 07:00 IST. Set the `RENDER_SERVICE_URL`
-repository Actions variable to the public Render service URL to enable the probe.
+Render's free tier spins the service down after inactivity. If you use an external
+uptime monitor, configure it to call the public `/liveness` endpoint. This keeps
+process monitoring separate from dependency checks and avoids querying PostgreSQL on
+every monitoring request.
 
-The public `/readiness` endpoint checks only that the API process can respond. The
-public `/health` endpoint additionally verifies database connectivity and returns
-`503 Service Unavailable` if PostgreSQL cannot be queried.
+The public `/liveness` endpoint checks only that the API process can respond. The
+public `/readiness` endpoint verifies that the API can serve traffic by checking its
+required database dependency. The public `/health` endpoint is the backward-compatible
+aggregate health check. Readiness and health return `503 Service Unavailable` if
+PostgreSQL cannot be queried within three seconds. Render uses `/readiness` as its
+platform health-check path; external keep-awake monitors should use `/liveness`.
 
 ## Local development
 
@@ -90,7 +92,7 @@ database. CI provisions and migrates a dedicated PostgreSQL database automatical
 
 Real per-user authentication: `POST /auth/register` creates an account (name, email,
 phone, password), `POST /auth/login` validates credentials, and both return a signed
-JWT alongside the user. Every request except `/health`, `/readiness`,
+JWT alongside the user. Every request except `/health`, `/liveness`, `/readiness`,
 `/auth/register`, `/auth/login`, `/auth/refresh`, and `/auth/logout` requires that token
 as `Authorization: Bearer <token>`. Access tokens are signed with `JWT_SECRET`, expire after
 15 minutes, and remain in frontend memory only. A revocable, opaque refresh token is stored
