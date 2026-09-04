@@ -6,18 +6,17 @@ import {
 } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { BalancesService } from '../balances/balances.service';
-import { mapBalanceInputs } from '../balances/balance-input-mapper';
-import { calculateNetBalances } from '../balances/balance-calculator';
+import { runSerializableTransaction } from '../common/run-serializable-transaction';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 import { GroupSummaryResponseDto } from './dto/group-summary-response.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { buildGroupSummaries, groupSummaryInclude } from './group-summary-builder';
 
 type GroupWithMembers = Group & { members: GroupMember[] };
 
 const ACTIVE_MEMBER = { leftAt: null };
-const SERIALIZABLE_TRANSACTION_ATTEMPTS = 3;
 
 @Injectable()
 export class GroupsService {
@@ -56,54 +55,9 @@ export class GroupsService {
     async findAllSummaries(userId: string): Promise<GroupSummaryResponseDto[]> {
         const groups = await this.prisma.group.findMany({
             where: { members: { some: { userId, ...ACTIVE_MEMBER } } },
-            include: {
-                members: { where: ACTIVE_MEMBER },
-                expenses: {
-                    select: {
-                        paidByUserId: true,
-                        createdAt: true,
-                        splits: { select: { userId: true, amount: true } },
-                    },
-                },
-                payments: {
-                    select: {
-                        fromUserId: true,
-                        toUserId: true,
-                        amount: true,
-                        createdAt: true,
-                    },
-                },
-            },
+            include: groupSummaryInclude,
         });
-
-        return groups.map((group) => {
-            const memberIds = group.members.map((member) => member.userId);
-            const balanceInputs = mapBalanceInputs(group.expenses, group.payments);
-            const balances = calculateNetBalances(
-                memberIds,
-                balanceInputs.expenses,
-                balanceInputs.payments,
-            );
-            const activityDates = [
-                ...group.expenses.map((expense) => expense.createdAt),
-                ...group.payments.map((payment) => payment.createdAt),
-            ];
-            const lastActivityAt = activityDates.reduce<Date | null>(
-                (latest, date) => (!latest || date > latest ? date : latest),
-                null,
-            );
-
-            return {
-                id: group.id,
-                name: group.name,
-                memberIds,
-                memberCount: memberIds.length,
-                currentUserBalance: balances.find((entry) => entry.userId === userId)?.balance ?? 0,
-                hasFinancialActivity: activityDates.length > 0,
-                lastActivityAt: lastActivityAt?.toISOString() ?? null,
-                createdAt: group.createdAt.toISOString(),
-            };
-        });
+        return buildGroupSummaries(groups, userId);
     }
 
     async findOne(id: string): Promise<GroupResponseDto> {
@@ -119,7 +73,7 @@ export class GroupsService {
 
     async remove(id: string): Promise<void> {
         try {
-            await this.runSerializableTransaction(async (tx) => {
+            await runSerializableTransaction(this.prisma, async (tx) => {
                 const { balances } = await this.balancesService.getGroupBalances(id, tx);
                 const unsettled = balances.filter((entry) => entry.balance !== 0);
                 if (unsettled.length > 0) {
@@ -137,7 +91,7 @@ export class GroupsService {
 
     async update(id: string, dto: UpdateGroupDto): Promise<GroupResponseDto> {
         try {
-            return await this.runSerializableTransaction(async (tx) => {
+            return await runSerializableTransaction(this.prisma, async (tx) => {
                 const existing = await tx.group.findUnique({
                     where: { id },
                     include: { members: { where: ACTIVE_MEMBER } },
@@ -208,26 +162,6 @@ export class GroupsService {
             memberIds: group.members.map((member) => member.userId),
             createdAt: group.createdAt.toISOString(),
         };
-    }
-
-    private async runSerializableTransaction<T>(
-        operation: (tx: Prisma.TransactionClient) => Promise<T>,
-    ): Promise<T> {
-        for (let attempt = 1; attempt <= SERIALIZABLE_TRANSACTION_ATTEMPTS; attempt++) {
-            try {
-                return await this.prisma.$transaction(operation, {
-                    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-                });
-            } catch (error) {
-                const isRetryableConflict =
-                    error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
-                if (!isRetryableConflict || attempt === SERIALIZABLE_TRANSACTION_ATTEMPTS) {
-                    throw error;
-                }
-            }
-        }
-
-        throw new Error('Serializable transaction retry limit exceeded');
     }
 
     private mapPrismaError(error: unknown, id?: string): Error {
