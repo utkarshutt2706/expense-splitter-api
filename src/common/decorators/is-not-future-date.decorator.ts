@@ -8,19 +8,31 @@ import {
 
 @ValidatorConstraint({ name: 'isNotFutureDate', async: false })
 class IsNotFutureDateConstraint implements ValidatorConstraintInterface {
-    validate(value: unknown): boolean {
+    validate(value: unknown, args: ValidationArguments): boolean {
         if (typeof value !== 'string') return false;
 
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return false;
 
-        const today = new Date();
-        const todayValue = [
-            today.getFullYear(),
-            String(today.getMonth() + 1).padStart(2, '0'),
-            String(today.getDate()).padStart(2, '0'),
-        ].join('-');
+        const { timeZone = 'UTC' } = args.object as { timeZone?: unknown };
+        if (typeof timeZone !== 'string') return false;
 
+        let todayValue: string;
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            }).formatToParts(new Date());
+            const part = (type: Intl.DateTimeFormatPartTypes) =>
+                parts.find((entry) => entry.type === type)?.value;
+            todayValue = `${part('year')}-${part('month')}-${part('day')}`;
+        } catch {
+            return false;
+        }
+
+        // paidOn represents a calendar date, not an instant to shift between zones.
         return value.slice(0, 10) <= todayValue;
     }
 

@@ -124,6 +124,14 @@ transport types. Run `pnpm generate:openapi` after changing a controller or DTO.
 command builds the API first so the Nest Swagger compiler plugin can contribute its
 metadata; it uses placeholder configuration and does not connect to a database.
 
+Expense and payment create/update requests accept a `timeZone` field containing an
+IANA timezone (for example, `Asia/Kolkata`). Send the user's timezone alongside
+`paidOn` so the API compares the selected calendar date with today in that timezone,
+independent of the server timezone. Tomorrow is rejected even when it is already
+today elsewhere. Omitted `timeZone` defaults to UTC for existing clients; invalid
+values return a validation error. The timezone is validation context and is not
+stored or used to shift the selected date.
+
 There's also a Postman collection at
 [`postman/expense-splitter-api.postman_collection.json`](postman/expense-splitter-api.postman_collection.json) —
 import it directly into Postman, set the `baseUrl` collection variable, then run

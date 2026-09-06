@@ -2786,6 +2786,11 @@
             "CreateExpenseDto": {
                 "type": "object",
                 "properties": {
+                    "timeZone": {
+                        "type": "string",
+                        "description": "IANA timezone used to validate paidOn against local today. Defaults to UTC.",
+                        "example": "Asia/Kolkata"
+                    },
                     "description": {
                         "type": "string",
                         "minLength": 1,
@@ -2896,6 +2901,11 @@
             "UpdateExpenseDto": {
                 "type": "object",
                 "properties": {
+                    "timeZone": {
+                        "type": "string",
+                        "description": "IANA timezone used to validate paidOn against local today. Defaults to UTC.",
+                        "example": "Asia/Kolkata"
+                    },
                     "description": {
                         "type": "string",
                         "minLength": 1,
@@ -2943,6 +2953,11 @@
             "CreatePaymentDto": {
                 "type": "object",
                 "properties": {
+                    "timeZone": {
+                        "type": "string",
+                        "description": "IANA timezone used to validate paidOn against local today. Defaults to UTC.",
+                        "example": "Asia/Kolkata"
+                    },
                     "fromUserId": {
                         "type": "string",
                         "minLength": 1
@@ -2999,6 +3014,11 @@
             "UpdatePaymentDto": {
                 "type": "object",
                 "properties": {
+                    "timeZone": {
+                        "type": "string",
+                        "description": "IANA timezone used to validate paidOn against local today. Defaults to UTC.",
+                        "example": "Asia/Kolkata"
+                    },
                     "fromUserId": {
                         "type": "string",
                         "minLength": 1
