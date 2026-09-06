@@ -792,7 +792,7 @@ const expenseResponse = (overrides = {}) => ({
 const expensesFolder = {
     name: 'Expenses',
     description:
-        "Nested under a group. The server independently recomputes the expected split from amount + splitType and rejects the write (400) if it doesn't reconcile with what you submitted -- never trust splits blindly.",
+        "Nested under a group. The server independently recomputes the expected split from amount + splitType and rejects the write (400) if it doesn't reconcile with what you submitted -- never trust splits blindly. Create/update requests accept paidOn and timeZone (an IANA timezone, e.g. Asia/Kolkata). paidOn must be no later than today in that timezone; omitted timeZone defaults to UTC.",
     item: [
         item(
             'Create expense - equal split',
@@ -1109,7 +1109,7 @@ const paymentResponse = (overrides = {}) => ({
 const paymentsFolder = {
     name: 'Payments',
     description:
-        'A direct transfer between two group members that settles part of a debt. Payments can be listed, created, fully replaced, and deleted.',
+        'A direct transfer between two group members that settles part of a debt. Payments can be listed, created, fully replaced, and deleted. Create/update requests accept paidOn and timeZone (an IANA timezone, e.g. Asia/Kolkata). paidOn must be no later than today in that timezone; omitted timeZone defaults to UTC.',
     item: [
         item(
             'Create payment',
