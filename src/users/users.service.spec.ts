@@ -63,7 +63,7 @@ describe('UsersService', () => {
 
     describe('lookup', () => {
         it('throws BadRequestException when query is missing', async () => {
-            await expect(service.lookup({})).rejects.toThrow(BadRequestException);
+            await expect(service.lookup({} as LookupUserDto)).rejects.toThrow(BadRequestException);
         });
 
         it('throws BadRequestException when query is only whitespace', async () => {
@@ -239,4 +239,62 @@ describe('UsersService', () => {
             await expect(service.remove('user-1')).rejects.toThrow(ConflictException);
         });
     });
+
+    it('writes only the requested update and excludes the password hash', async () => {
+        const updated = { ...user, name: 'Changed' };
+        prisma.user.update.mockResolvedValue(updated);
+        await expect(service.update('user-1', { name: 'Changed' })).resolves.toEqual(updated);
+        expect(prisma.user.update).toHaveBeenCalledWith({
+            where: { id: 'user-1' },
+            data: { name: 'Changed' },
+            omit: { passwordHash: true },
+        });
+    });
+    it('excludes the password hash on individual lookup', async () => {
+        prisma.user.findUnique.mockResolvedValue(user);
+        await expect(service.findOne('user-1')).resolves.toEqual(user);
+        expect(prisma.user.findUnique).toHaveBeenCalledWith({
+            where: { id: 'user-1' },
+            omit: { passwordHash: true },
+        });
+    });
+    it.each([null, undefined, 42, [], {}])(
+        'transforms malformed lookup %p into empty input',
+        (query) => {
+            expect(plainToInstance(LookupUserDto, { query }).query).toBe('');
+        },
+    );
+    it('accepts the exact three-character lookup boundary', async () => {
+        prisma.user.findMany.mockResolvedValue([]);
+        await expect(service.lookup({ query: ' abc ' })).resolves.toEqual([]);
+        expect(prisma.user.findMany).toHaveBeenCalledWith({
+            where: { name: { contains: 'abc', mode: 'insensitive' } },
+            select: { id: true, name: true, avatarUrl: true, email: false, phone: false },
+            orderBy: { name: 'asc' },
+            take: 10,
+        });
+    });
+    it('reports the conflicting field names', async () => {
+        prisma.user.update.mockRejectedValue(
+            knownRequestError('P2002', { target: ['email', 'phone'] }),
+        );
+        await expect(service.update('user-1', {})).rejects.toThrow(
+            'A user with this email, phone already exists',
+        );
+    });
+    it.each(['update', 'remove'] as const)(
+        'preserves unknown errors from %s and normalizes thrown values',
+        async (method) => {
+            const mock = method === 'update' ? prisma.user.update : prisma.user.delete;
+            const error = new Error('unavailable');
+            mock.mockRejectedValueOnce(error)
+                .mockRejectedValueOnce(null)
+                .mockRejectedValueOnce(knownRequestError('P2024'));
+            const call = () =>
+                method === 'update' ? service.update('user-1', {}) : service.remove('user-1');
+            await expect(call()).rejects.toBe(error);
+            await expect(call()).rejects.toThrow('Unexpected error');
+            await expect(call()).rejects.toMatchObject({ code: 'P2024' });
+        },
+    );
 });

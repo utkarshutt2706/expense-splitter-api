@@ -81,4 +81,58 @@ describe('BalancesService', () => {
         );
         expect(result.settlements).toEqual([]);
     });
+
+    it('uses the supplied transaction for all reads and nets actual payment amounts', async () => {
+        const tx = {
+            group: {
+                findUnique: jest
+                    .fn()
+                    .mockResolvedValue({ members: [{ userId: 'a' }, { userId: 'b' }] }),
+            },
+            expense: {
+                findMany: jest
+                    .fn()
+                    .mockResolvedValue([
+                        { paidByUserId: 'a', splits: [{ userId: 'b', amount: dec(10.25) }] },
+                    ]),
+            },
+            payment: {
+                findMany: jest
+                    .fn()
+                    .mockResolvedValue([{ fromUserId: 'b', toUserId: 'a', amount: dec(3.1) }]),
+            },
+        };
+        await expect(
+            service.getGroupBalances('g', tx as unknown as Prisma.TransactionClient),
+        ).resolves.toEqual({
+            balances: [
+                { userId: 'a', balance: 7.15 },
+                { userId: 'b', balance: -7.15 },
+            ],
+            settlements: [{ fromUserId: 'b', toUserId: 'a', amount: 7.15 }],
+        });
+        expect(tx.group.findUnique).toHaveBeenCalledWith({
+            where: { id: 'g' },
+            include: { members: true },
+        });
+        expect(tx.expense.findMany).toHaveBeenCalledWith({
+            where: { groupId: 'g' },
+            include: { splits: true },
+        });
+        expect(tx.payment.findMany).toHaveBeenCalledWith({ where: { groupId: 'g' } });
+        expect(prisma.group.findUnique).not.toHaveBeenCalled();
+        expect(prisma.expense.findMany).not.toHaveBeenCalled();
+        expect(prisma.payment.findMany).not.toHaveBeenCalled();
+    });
+    it.each(['expense', 'payment'] as const)(
+        'propagates %s read failures rather than returning partial balances',
+        async (model) => {
+            prisma.group.findUnique.mockResolvedValue({ members: [] });
+            prisma.expense.findMany.mockResolvedValue([]);
+            prisma.payment.findMany.mockResolvedValue([]);
+            const error = new Error('read failed');
+            prisma[model].findMany.mockRejectedValue(error);
+            await expect(service.getGroupBalances('g')).rejects.toBe(error);
+        },
+    );
 });

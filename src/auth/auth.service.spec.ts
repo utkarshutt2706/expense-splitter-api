@@ -1,9 +1,10 @@
+import { hashRefreshToken, REFRESH_SESSION_TTL_MS } from './refresh-session';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
-import { hashPassword } from './password-hasher';
+import { hashPassword, verifyPassword } from './password-hasher';
 
 function knownRequestError(code: string, meta?: Record<string, unknown>) {
     return new Prisma.PrismaClientKnownRequestError('mock prisma error', {
@@ -296,6 +297,120 @@ describe('AuthService', () => {
                     newPassword: 'a-new-secure-password',
                 }),
             ).rejects.toThrow(UnauthorizedException);
+        });
+    });
+
+    describe('session and persistence boundaries', () => {
+        afterEach(() => jest.useRealTimers());
+        it('stores exactly the token hash and seven-day expiry', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-09-01T12:00:00Z'));
+            const token = await service.createRefreshSession('user-1');
+            expect(prisma.authSession.create).toHaveBeenCalledWith({
+                data: {
+                    userId: 'user-1',
+                    tokenHash: hashRefreshToken(token),
+                    expiresAt: new Date(Date.now() + REFRESH_SESSION_TTL_MS),
+                },
+            });
+            expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        });
+        it('expires a session exactly at its deadline and never signs a token', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-09-01T12:00:00Z'));
+            prisma.authSession.findUnique.mockResolvedValue({
+                id: 's',
+                expiresAt: new Date(),
+                user: {},
+            });
+            await expect(service.refresh('t')).resolves.toBeNull();
+            expect(prisma.authSession.findUnique).toHaveBeenCalledWith({
+                where: { tokenHash: hashRefreshToken('t') },
+                include: { user: true },
+            });
+            expect(prisma.authSession.delete).toHaveBeenCalledWith({ where: { id: 's' } });
+            expect(jwtService.signAsync).not.toHaveBeenCalled();
+        });
+        it('targets the same hash on repeated revocation', async () => {
+            await service.revokeRefreshSession('token');
+            await service.revokeRefreshSession('token');
+            expect(prisma.authSession.deleteMany).toHaveBeenCalledTimes(2);
+            expect(prisma.authSession.deleteMany).toHaveBeenLastCalledWith({
+                where: { tokenHash: hashRefreshToken('token') },
+            });
+        });
+        it.each(['create', 'findUnique', 'deleteMany'] as const)(
+            'propagates authSession.%s failures',
+            async (method) => {
+                const error = new Error('session unavailable');
+                prisma.authSession[method].mockRejectedValue(error);
+                const operation =
+                    method === 'create'
+                        ? service.createRefreshSession('u')
+                        : method === 'findUnique'
+                          ? service.refresh('t')
+                          : service.revokeRefreshSession('t');
+                await expect(operation).rejects.toBe(error);
+                expect(jwtService.signAsync).not.toHaveBeenCalled();
+            },
+        );
+        it('stores a usable replacement password for exactly the requested account', async () => {
+            prisma.user.findUnique.mockResolvedValue({
+                passwordHash: await hashPassword('old-password'),
+            });
+            await service.changePassword('user-1', {
+                currentPassword: 'old-password',
+                newPassword: 'new-password',
+            });
+            const calls = prisma.user.update.mock.calls as [
+                { where: { id: string }; data: { passwordHash: string } },
+            ][];
+            expect(calls[0][0].where).toEqual({ id: 'user-1' });
+            await expect(
+                verifyPassword('new-password', calls[0][0].data.passwordHash),
+            ).resolves.toBe(true);
+            await expect(
+                verifyPassword('old-password', calls[0][0].data.passwordHash),
+            ).resolves.toBe(false);
+        });
+        it.each([undefined, { target: 'phone' }, { target: ['phone', 'email'] }])(
+            'maps unique constraint metadata %p',
+            async (meta) => {
+                prisma.user.create.mockRejectedValue(knownRequestError('P2002', meta));
+                const field = Array.isArray(meta?.target) ? 'phone, email' : 'field';
+                await expect(
+                    service.register({
+                        name: 'U',
+                        email: 'u@example.com',
+                        phone: '9876543210',
+                        password: 'password',
+                    }),
+                ).rejects.toThrow(`A user with this ${field} already exists`);
+                expect(jwtService.signAsync).not.toHaveBeenCalled();
+            },
+        );
+        it('normalizes unknown thrown values and preserves non-conflict Prisma errors', async () => {
+            const dto = {
+                name: 'U',
+                email: 'u@example.com',
+                phone: '9876543210',
+                password: 'password',
+            };
+            prisma.user.create.mockRejectedValueOnce(null);
+            await expect(service.register(dto)).rejects.toThrow('Unexpected error');
+            const error = knownRequestError('P2024');
+            prisma.user.create.mockRejectedValueOnce(error);
+            await expect(service.register(dto)).rejects.toBe(error);
+        });
+        it('propagates signing failure after valid credentials without returning a partial response', async () => {
+            prisma.user.findUnique.mockResolvedValue({
+                id: 'u',
+                email: 'u@example.com',
+                passwordHash: await hashPassword('password'),
+            });
+            const error = new Error('signing unavailable');
+            jwtService.signAsync.mockRejectedValue(error);
+            await expect(
+                service.login({ email: 'u@example.com', password: 'password' }),
+            ).rejects.toBe(error);
         });
     });
 });

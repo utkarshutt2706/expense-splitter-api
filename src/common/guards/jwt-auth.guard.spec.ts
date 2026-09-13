@@ -25,7 +25,7 @@ describe('JwtAuthGuard', () => {
         jwtService = { verifyAsync: jest.fn() };
         prisma = {
             user: {
-                findUnique: jest.fn<(args: unknown) => Promise<{ phone: string | null } | null>>(),
+                findUnique: jest.fn<Promise<{ phone: string | null } | null>, [unknown]>(),
             },
         };
         guard = new JwtAuthGuard(
@@ -37,8 +37,8 @@ describe('JwtAuthGuard', () => {
 
     function mockContext(request: MockRequest): ExecutionContext {
         return {
-            getHandler: () => undefined,
-            getClass: () => undefined,
+            getHandler: () => function handler() {},
+            getClass: () => class Controller {},
             switchToHttp: () => ({
                 getRequest: () => request,
             }),
@@ -117,5 +117,44 @@ describe('JwtAuthGuard', () => {
         await expect(guard.canActivate(mockContext(request))).resolves.toBe(true);
         expect(jwtService.verifyAsync).toHaveBeenCalledWith('good-token');
         expect(request.user).toEqual(payload);
+    });
+
+    it.each([false, true])(
+        'rejects deleted users even when allowMissingPhone=%p',
+        async (allow) => {
+            jest.spyOn(reflector, 'getAllAndOverride').mockImplementation(
+                (key) => key === ALLOW_MISSING_PHONE_KEY && allow,
+            );
+            jwtService.verifyAsync.mockResolvedValue({ sub: 'deleted', email: null });
+            prisma.user.findUnique.mockResolvedValue(null);
+            await expect(
+                guard.canActivate(mockContext({ header: () => 'Bearer token' })),
+            ).rejects.toThrow(ForbiddenException);
+        },
+    );
+    it.each(['', 'Bearer ', 'bearer token', 'Basic token'])(
+        'rejects malformed authorization %p without querying DB',
+        async (header) => {
+            await expect(guard.canActivate(mockContext({ header: () => header }))).rejects.toThrow(
+                UnauthorizedException,
+            );
+            expect(jwtService.verifyAsync).not.toHaveBeenCalled();
+            expect(prisma.user.findUnique).not.toHaveBeenCalled();
+        },
+    );
+    it('does not mask a database outage as invalid credentials', async () => {
+        jwtService.verifyAsync.mockResolvedValue({ sub: 'u', email: null });
+        const error = new Error('DB unavailable');
+        prisma.user.findUnique.mockRejectedValue(error);
+        await expect(guard.canActivate(mockContext({ header: () => 'Bearer token' }))).rejects.toBe(
+            error,
+        );
+    });
+    it('does not query users after verification failure', async () => {
+        jwtService.verifyAsync.mockRejectedValue(new Error('expired'));
+        await expect(
+            guard.canActivate(mockContext({ header: () => 'Bearer expired' })),
+        ).rejects.toThrow('Invalid or expired token');
+        expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
 });

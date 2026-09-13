@@ -67,4 +67,22 @@ describe('createDocsBasicAuthMiddleware', () => {
         expect(res.status).toHaveBeenCalledWith(401);
         expect(res.setHeader).toHaveBeenCalledWith('WWW-Authenticate', expect.any(String));
     });
+
+    it.each([
+        'Basic ',
+        'Basic !!!',
+        `Basic ${Buffer.from('no-separator').toString('base64')}`,
+        `Basic ${Buffer.from('user:').toString('base64')}`,
+    ])('rejects malformed credentials %s with the complete challenge', (header) => {
+        const next = jest.fn();
+        const res = mockResponse();
+        middleware(requestWithAuthorization(header), res as unknown as Response, next);
+        expect(next).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.setHeader).toHaveBeenCalledWith(
+            'WWW-Authenticate',
+            'Basic realm="Expense Splitter API Docs"',
+        );
+        expect(res.send).toHaveBeenCalledWith('Authentication required');
+    });
 });

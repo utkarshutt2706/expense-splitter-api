@@ -335,13 +335,16 @@ describe('ExpensesService', () => {
             const dto: CreateExpenseDto = {
                 description: 'Daaru',
                 amount: 100,
-                paidByUserId: 'missing-user',
+                paidByUserId: 'user-1',
                 splitType: SplitType.equal,
-                splits: [{ userId: 'missing-user', amount: 100 }],
+                splits: [{ userId: 'user-1', amount: 100 }],
             };
             prisma.expense.create.mockRejectedValue(knownRequestError('P2003'));
 
-            await expect(service.create('group-1', dto)).rejects.toThrow(BadRequestException);
+            await expect(service.create('group-1', dto)).rejects.toThrow(
+                'paidByUserId or a split userId does not reference an existing user',
+            );
+            expect(prisma.expense.create).toHaveBeenCalledTimes(1);
         });
 
         it('rethrows unrecognized persist errors unchanged', async () => {
@@ -456,33 +459,59 @@ describe('ExpensesService', () => {
             expect(prisma.$transaction).not.toHaveBeenCalled();
         });
 
-        it('replaces the splits and updates the expense atomically', async () => {
-            const newDto: CreateExpenseDto = {
-                description: 'Daaru (updated)',
+        it('submits split replacement in one transaction and returns the refreshed expense', async () => {
+            const dto: CreateExpenseDto = {
+                description: 'Updated',
                 amount: 200,
                 paidByUserId: 'user-2',
                 splitType: SplitType.equal,
+                paidOn: '2026-08-01T12:00:00Z',
                 splits: [
                     { userId: 'a', amount: 100 },
                     { userId: 'b', amount: 100 },
                 ],
             };
+            const deletion = Promise.resolve({ count: 1 });
+            const update = Promise.resolve(persistedExpense(dto));
+            prisma.expenseSplit.deleteMany.mockReturnValue(deletion);
+            prisma.expense.update.mockReturnValue(update);
+            prisma.expense.findFirst
+                .mockResolvedValueOnce(persistedExpense(existingDto))
+                .mockResolvedValueOnce({
+                    ...persistedExpense(dto),
+                    createdByUserId: 'user-1',
+                    paidOn: new Date(dto.paidOn!),
+                });
 
-            await service.update('group-1', 'expense-1', newDto);
+            const result = await service.update('group-1', 'expense-1', dto);
 
             expect(prisma.expenseSplit.deleteMany).toHaveBeenCalledWith({
                 where: { expenseId: 'expense-1' },
             });
-
-            const updateMock = prisma.expense.update as jest.MockedFunction<
-                (args: { where: { id: string }; data: { paidOn: Date } }) => Promise<unknown>
-            >;
-            updateMock.mockImplementation((args) => {
-                expect(args.where.id).toBe('expense-1');
-                expect(args.data.paidOn).toBeInstanceOf(Date);
-                return Promise.resolve(persistedExpense(newDto));
+            expect(prisma.expense.update).toHaveBeenCalledWith({
+                where: { id: 'expense-1' },
+                data: {
+                    description: dto.description,
+                    amount: 200,
+                    paidByUserId: 'user-2',
+                    splitType: SplitType.equal,
+                    paidOn: new Date(dto.paidOn!),
+                    splits: { create: dto.splits },
+                },
             });
-            expect(prisma.$transaction).toHaveBeenCalled();
+            expect(prisma.$transaction).toHaveBeenCalledWith([deletion, update]);
+            expect(result).toEqual({
+                id: 'expense-1',
+                groupId: 'group-1',
+                description: 'Updated',
+                amount: 200,
+                paidByUserId: 'user-2',
+                createdByUserId: 'user-1',
+                splitType: SplitType.equal,
+                splits: dto.splits,
+                paidOn: '2026-08-01T12:00:00.000Z',
+                createdAt: '2026-07-23T10:00:00.000Z',
+            });
         });
 
         it('maps a foreign key violation on persist to BadRequestException', async () => {
@@ -548,6 +577,139 @@ describe('ExpensesService', () => {
             prisma.expense.delete.mockRejectedValue(new Error('boom'));
 
             await expect(service.remove('group-1', 'expense-1')).rejects.toThrow('boom');
+        });
+    });
+
+    describe('persistence and failure contracts', () => {
+        const dto: CreateExpenseDto = {
+            description: 'Meal',
+            amount: 10.25,
+            paidByUserId: 'a',
+            splitType: SplitType.exact,
+            splits: [{ userId: 'b', amount: 10.25 }],
+        };
+        afterEach(() => jest.useRealTimers());
+        it.each([undefined, '2026-08-01T10:30:00+05:30'])(
+            'persists the exact date and caller attribution: %p',
+            async (paidOn) => {
+                jest.useFakeTimers().setSystemTime(new Date('2026-09-01T12:00:00Z'));
+                const expectedDate = new Date(paidOn ?? '2026-09-01T12:00:00Z');
+                prisma.expense.create.mockResolvedValue({
+                    ...persistedExpense(dto),
+                    paidOn: expectedDate,
+                    createdByUserId: 'user-1',
+                });
+                const result = await service.create('group-1', { ...dto, paidOn }, 'user-1');
+                expect(prisma.expense.create).toHaveBeenCalledWith({
+                    data: {
+                        groupId: 'group-1',
+                        description: 'Meal',
+                        amount: 10.25,
+                        paidByUserId: 'a',
+                        createdByUserId: 'user-1',
+                        splitType: SplitType.exact,
+                        paidOn: expectedDate,
+                        splits: { create: dto.splits },
+                    },
+                    include: { splits: true },
+                });
+                expect(result).toEqual({
+                    id: 'expense-1',
+                    groupId: 'group-1',
+                    description: 'Meal',
+                    amount: 10.25,
+                    paidByUserId: 'a',
+                    createdByUserId: 'user-1',
+                    splitType: SplitType.exact,
+                    splits: dto.splits,
+                    paidOn: expectedDate.toISOString(),
+                    createdAt: '2026-07-23T10:00:00.000Z',
+                });
+            },
+        );
+        it('lists only the requested group, in creation order, including empty results', async () => {
+            prisma.expense.findMany.mockResolvedValue([]);
+            await expect(service.findAllByGroup('group-1')).resolves.toEqual([]);
+            expect(prisma.expense.findMany).toHaveBeenCalledWith({
+                where: { groupId: 'group-1' },
+                include: { splits: true },
+                orderBy: { createdAt: 'asc' },
+            });
+        });
+        it('does not write when participant lookup fails', async () => {
+            const error = new Error('unavailable');
+            prisma.group.findUnique.mockRejectedValue(error);
+            await expect(service.create('group-1', dto)).rejects.toBe(error);
+            expect(prisma.expense.create).not.toHaveBeenCalled();
+        });
+        it('queries active members and reports invalid participant ids once', async () => {
+            await expect(
+                service.create('group-1', {
+                    ...dto,
+                    paidByUserId: 'outsider',
+                    splits: [{ userId: 'outsider', amount: 10.25 }],
+                }),
+            ).rejects.toThrow('invalid userId(s): outsider');
+            expect(prisma.group.findUnique).toHaveBeenCalledWith({
+                where: { id: 'group-1' },
+                select: { members: { where: { leftAt: null }, select: { userId: true } } },
+            });
+            expect(prisma.expense.create).not.toHaveBeenCalled();
+        });
+        it.each(['percentage', 'shares'] as const)(
+            'checks participants in %s inputs before writing',
+            async (splitType) => {
+                const fields =
+                    splitType === 'percentage'
+                        ? { percentages: [{ userId: 'outside', percentage: 100 }] }
+                        : { shares: [{ userId: 'outside', shares: 1 }] };
+                await expect(
+                    service.create('group-1', { ...dto, splitType, ...fields }),
+                ).rejects.toThrow('invalid userId(s): outside');
+                expect(prisma.expense.create).not.toHaveBeenCalled();
+            },
+        );
+        it('retains the unsupported split-type defense for service callers', async () => {
+            await expect(
+                service.create('group-1', { ...dto, splitType: 'unsupported' as SplitType }),
+            ).rejects.toThrow('Unsupported split type: unsupported');
+            expect(prisma.expense.create).not.toHaveBeenCalled();
+        });
+        it('maps missing records during creation without requiring an expense id', async () => {
+            prisma.expense.create.mockRejectedValue(knownRequestError('P2025'));
+            await expect(service.create('group-1', dto)).rejects.toThrow('Expense not found');
+        });
+        it('normalizes a non-Error rejection while preserving unknown Prisma errors', async () => {
+            prisma.expense.create.mockRejectedValueOnce(null);
+            await expect(service.create('group-1', dto)).rejects.toThrow('Unexpected error');
+            const error = knownRequestError('P2024');
+            prisma.expense.create.mockRejectedValue(error);
+            await expect(service.create('group-1', dto)).rejects.toBe(error);
+        });
+        it('keeps legacy paidOn fallback for records that predate the field', async () => {
+            prisma.expense.findFirst.mockResolvedValue({
+                ...persistedExpense(dto),
+                paidOn: undefined,
+            });
+            await expect(service.findOne('group-1', 'expense-1')).resolves.toMatchObject({
+                paidOn: '2026-07-23T10:00:00.000Z',
+            });
+        });
+        it('does not reread after a failed update transaction', async () => {
+            prisma.expense.findFirst.mockResolvedValue(persistedExpense(dto));
+            const error = new Error('transaction failed');
+            prisma.$transaction.mockRejectedValue(error);
+            await expect(service.update('group-1', 'expense-1', dto)).rejects.toBe(error);
+            expect(prisma.expense.findFirst).toHaveBeenCalledTimes(1);
+        });
+        it('propagates a failed post-commit reread without repeating the write', async () => {
+            const error = new Error('read unavailable');
+            prisma.expense.findFirst
+                .mockResolvedValueOnce(persistedExpense(dto))
+                .mockRejectedValueOnce(error);
+            prisma.$transaction.mockResolvedValue([]);
+            await expect(service.update('group-1', 'expense-1', dto)).rejects.toBe(error);
+            expect(prisma.$transaction).toHaveBeenCalledTimes(1);
         });
     });
 });

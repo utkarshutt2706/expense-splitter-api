@@ -6,8 +6,11 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { lastValueFrom, throwError } from 'rxjs';
-import { ControllerErrorLoggingInterceptor } from './controller-error-logging.interceptor';
+import { lastValueFrom, of, throwError } from 'rxjs';
+import {
+    CONTROLLER_ERROR_LOGGED,
+    ControllerErrorLoggingInterceptor,
+} from './controller-error-logging.interceptor';
 
 type MockRequest = Pick<Request, 'method' | 'path' | 'route'> & {
     user?: { sub?: string };
@@ -94,5 +97,27 @@ describe('ControllerErrorLoggingInterceptor', () => {
                 'controller=TestController | handler=testHandler | user=anonymous',
             error.stack,
         );
+    });
+
+    it('passes successful values through without logging or marking failure', async () => {
+        const request = { method: 'GET', path: '/ok', route: undefined };
+        const result = { id: 'record' };
+        await expect(
+            lastValueFrom(interceptor.intercept(contextFor(request), { handle: () => of(result) })),
+        ).resolves.toBe(result);
+        expect(Reflect.has(request, CONTROLLER_ERROR_LOGGED)).toBe(false);
+        expect(logError).not.toHaveBeenCalled();
+        expect(logWarning).not.toHaveBeenCalled();
+    });
+    it('logs non-Error failures once using the fallback route and marks the request', async () => {
+        const request = { method: 'GET', path: '/fallback', route: undefined };
+        await expect(
+            lastValueFrom(interceptor.intercept(contextFor(request), failingHandler('failed'))),
+        ).rejects.toBe('failed');
+        expect(logError).toHaveBeenCalledWith(
+            'Controller request failed | GET /fallback | status=500 | controller=TestController | handler=testHandler | user=anonymous',
+            'failed',
+        );
+        expect(Reflect.get(request, CONTROLLER_ERROR_LOGGED)).toBe(true);
     });
 });

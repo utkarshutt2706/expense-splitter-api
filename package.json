@@ -90,9 +90,7 @@
         },
         "collectCoverageFrom": [
             "**/*.(t|j)s",
-            "!main.ts",
-            "!**/*.module.ts",
-            "!**/*-response.dto.ts"
+            "!**/*.spec.ts"
         ],
         "coverageThreshold": {
             "global": {

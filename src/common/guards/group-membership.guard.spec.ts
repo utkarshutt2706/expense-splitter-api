@@ -77,4 +77,20 @@ describe('GroupMembershipGuard', () => {
             'GroupMembershipGuard requires a groupId or id route parameter',
         );
     });
+
+    it('prefers groupId over the nested resource id', async () => {
+        prisma.group.findUnique.mockResolvedValue({ members: [{ userId: 'user-1' }] });
+        await expect(
+            guard.canActivate(mockContext({ groupId: 'group-1', id: 'expense-1' })),
+        ).resolves.toBe(true);
+        expect(prisma.group.findUnique).toHaveBeenCalledWith({
+            where: { id: 'group-1' },
+            include: { members: { where: { userId: 'user-1', leftAt: null } } },
+        });
+    });
+    it('propagates DB failures instead of allowing access', async () => {
+        const error = new Error('DB unavailable');
+        prisma.group.findUnique.mockRejectedValue(error);
+        await expect(guard.canActivate(mockContext({ groupId: 'group-1' }))).rejects.toBe(error);
+    });
 });

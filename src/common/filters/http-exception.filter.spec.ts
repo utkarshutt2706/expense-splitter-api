@@ -1,3 +1,4 @@
+import { CONTROLLER_ERROR_LOGGED } from '../interceptors/controller-error-logging.interceptor';
 import {
     ArgumentsHost,
     BadRequestException,
@@ -199,5 +200,60 @@ describe('HttpExceptionFilter', () => {
             'Request failed | GET /test | status=500 | user=anonymous | Unexpected error',
             expect.any(String),
         );
+    });
+
+    it.each([{}, { message: 42 }, { message: null }])(
+        'falls back to exception message for response %p',
+        (body) => {
+            const res = mockResponse();
+            const error = new HttpException(body, 400);
+            error.message = 'fallback message';
+            filter.catch(error, mockHost(res));
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                error: { code: 'VALIDATION_ERROR', message: 'Fallback message' },
+            });
+        },
+    );
+    it('preserves empty messages and stringifies array entries', () => {
+        const res = mockResponse();
+        filter.catch(new HttpException({ message: [' ', 42, null] }, 400), mockHost(res));
+        expect(res.json).toHaveBeenCalledWith({
+            error: { code: 'VALIDATION_ERROR', message: '; 42; Null' },
+        });
+    });
+    it('redacts non-Error failures and falls back to the request path', () => {
+        const res = mockResponse();
+        const host = {
+            switchToHttp: () => ({
+                getResponse: () => res,
+                getRequest: () => ({ method: 'GET', path: '/unknown', user: { sub: 'u' } }),
+            }),
+        } as unknown as ArgumentsHost;
+        filter.catch('internal failure', host);
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({
+            error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+        });
+        expect(logError).toHaveBeenCalledWith(
+            'Request failed | GET /unknown | status=500 | user=u | Unexpected error',
+            'internal failure',
+        );
+    });
+    it('does not duplicate a failure already logged by the interceptor', () => {
+        const res = mockResponse();
+        const host = {
+            switchToHttp: () => ({
+                getResponse: () => res,
+                getRequest: () => ({ [CONTROLLER_ERROR_LOGGED]: true }),
+            }),
+        } as unknown as ArgumentsHost;
+        filter.catch(new UnauthorizedException('invalid'), host);
+        expect(logWarning).not.toHaveBeenCalled();
+        expect(logError).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({
+            error: { code: 'UNAUTHORIZED', message: 'Invalid' },
+        });
     });
 });

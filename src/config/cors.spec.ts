@@ -44,3 +44,19 @@ describe('isOriginAllowed', () => {
         expect(isOriginAllowed('https://localhost:5173', allowedOrigins)).toBe(false);
     });
 });
+
+describe('origin security boundaries', () => {
+    it.each([
+        'http://localhost.evil.com',
+        'http://localhost:80/path',
+        'null',
+        'https://allowed.example.com.evil.com',
+        'http://127.0.0.1:3000',
+    ])('rejects lookalike origin %s', (origin) => {
+        expect(isOriginAllowed(origin, ['https://allowed.example.com'])).toBe(false);
+    });
+    it('handles an empty allowlist configuration', () => {
+        expect(parseAllowedOrigins(' , , ')).toEqual([]);
+        expect(isOriginAllowed('https://client.example.com', [])).toBe(false);
+    });
+});
