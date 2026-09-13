@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Payment, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from './payments.service';
 
@@ -35,7 +35,7 @@ describe('PaymentsService', () => {
     };
     const createdAt = new Date('2026-07-24T10:00:00.000Z');
 
-    const payment: Prisma.Payment = {
+    const payment: Payment = {
         id: 'payment-1',
         groupId: 'group-1',
         fromUserId: 'user-1',
@@ -56,7 +56,7 @@ describe('PaymentsService', () => {
                 delete: jest.fn(),
             },
         };
-        service = new PaymentsService(prisma as PrismaService);
+        service = new PaymentsService(prisma as unknown as PrismaService);
         prisma.group.findUnique.mockResolvedValue(group);
     });
 
@@ -125,11 +125,12 @@ describe('PaymentsService', () => {
 
             await expect(
                 service.create('group-1', {
-                    fromUserId: 'missing-user',
+                    fromUserId: 'user-1',
                     toUserId: 'user-2',
                     amount: 500,
                 }),
-            ).rejects.toThrow(BadRequestException);
+            ).rejects.toThrow('fromUserId or toUserId does not reference an existing user');
+            expect(prisma.payment.create).toHaveBeenCalledTimes(1);
         });
 
         it('rethrows unrecognized errors unchanged', async () => {
@@ -204,7 +205,7 @@ describe('PaymentsService', () => {
         });
 
         it('replaces the payment and maps it to the response shape', async () => {
-            const updated: Prisma.Payment = {
+            const updated: Payment = {
                 id: 'payment-1',
                 groupId: 'group-1',
                 fromUserId: dto.fromUserId,
@@ -282,6 +283,82 @@ describe('PaymentsService', () => {
             prisma.payment.delete.mockRejectedValue(new Error('boom'));
 
             await expect(service.remove('group-1', 'payment-1')).rejects.toThrow('boom');
+        });
+    });
+
+    describe('persistence and failure contracts', () => {
+        const dto = { fromUserId: 'user-1', toUserId: 'user-2', amount: 10.25 };
+        afterEach(() => jest.useRealTimers());
+        it.each([undefined, '2026-08-01T10:30:00+05:30'])(
+            'writes the exact provided/default date %p',
+            async (paidOn) => {
+                jest.useFakeTimers().setSystemTime(new Date('2026-09-01T12:00:00Z'));
+                const expectedDate = new Date(paidOn ?? '2026-09-01T12:00:00Z');
+                prisma.payment.create.mockResolvedValue({
+                    ...payment,
+                    amount: dec(10.25),
+                    paidOn: expectedDate,
+                });
+                await expect(service.create('group-1', { ...dto, paidOn })).resolves.toMatchObject({
+                    amount: 10.25,
+                    paidOn: expectedDate.toISOString(),
+                });
+                expect(prisma.payment.create).toHaveBeenCalledWith({
+                    data: { groupId: 'group-1', ...dto, paidOn: expectedDate },
+                });
+                prisma.payment.findFirst.mockResolvedValue(payment);
+                prisma.payment.update.mockResolvedValue({
+                    ...payment,
+                    ...dto,
+                    amount: dec(10.25),
+                    paidOn: expectedDate,
+                });
+                await expect(
+                    service.update('group-1', 'payment-1', { ...dto, paidOn }),
+                ).resolves.toMatchObject({ amount: 10.25, paidOn: expectedDate.toISOString() });
+                expect(prisma.payment.update).toHaveBeenCalledWith({
+                    where: { id: 'payment-1' },
+                    data: { ...dto, paidOn: expectedDate },
+                });
+            },
+        );
+        it('returns an empty, group-scoped ordered list', async () => {
+            prisma.payment.findMany.mockResolvedValue([]);
+            await expect(service.findAllByGroup('group-1')).resolves.toEqual([]);
+            expect(prisma.payment.findMany).toHaveBeenCalledWith({
+                where: { groupId: 'group-1' },
+                orderBy: { createdAt: 'asc' },
+            });
+        });
+        it('does not write after participant lookup failure', async () => {
+            const error = new Error('DB down');
+            prisma.group.findUnique.mockRejectedValue(error);
+            await expect(service.create('group-1', dto)).rejects.toBe(error);
+            expect(prisma.payment.create).not.toHaveBeenCalled();
+        });
+        it('preserves legacy date fallback', async () => {
+            prisma.payment.findMany.mockResolvedValue([{ ...payment, paidOn: null }]);
+            await expect(service.findAllByGroup('group-1')).resolves.toEqual([
+                {
+                    id: payment.id,
+                    groupId: payment.groupId,
+                    fromUserId: payment.fromUserId,
+                    toUserId: payment.toUserId,
+                    amount: 500,
+                    paidOn: createdAt.toISOString(),
+                    createdAt: createdAt.toISOString(),
+                },
+            ]);
+        });
+        it('maps creation P2025 without an id', async () => {
+            prisma.payment.create.mockRejectedValue(knownRequestError('P2025'));
+            await expect(service.create('group-1', dto)).rejects.toThrow('Payment not found');
+        });
+        it('preserves unknown Prisma failures and normalizes non-Error rejections', async () => {
+            const error = knownRequestError('P2024');
+            prisma.payment.create.mockRejectedValueOnce(error).mockRejectedValueOnce(null);
+            await expect(service.create('group-1', dto)).rejects.toBe(error);
+            await expect(service.create('group-1', dto)).rejects.toThrow('Unexpected error');
         });
     });
 });

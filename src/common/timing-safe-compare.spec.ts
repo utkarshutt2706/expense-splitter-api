@@ -13,3 +13,12 @@ describe('timingSafeCompare', () => {
         expect(timingSafeCompare('short', 'a-much-longer-value')).toBe(false);
     });
 });
+
+describe('UTF-8 comparison', () => {
+    it('compares bytes correctly for Unicode and empty strings', () => {
+        expect(timingSafeCompare('', '')).toBe(true);
+        expect(timingSafeCompare('é', 'a')).toBe(false);
+        expect(timingSafeCompare('é', 'é')).toBe(true);
+        expect(timingSafeCompare('é', 'è')).toBe(false);
+    });
+});

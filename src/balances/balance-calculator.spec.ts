@@ -233,3 +233,55 @@ describe('simplifyDebts', () => {
         expect(result).toEqual([{ fromUserId: 'a', toUserId: 'c', amount: 50 }]);
     });
 });
+
+describe('balance conservation', () => {
+    it.each([1, 3, 101, 99999])(
+        'settles every account exactly for %i cents without mutating input',
+        (cents) => {
+            const balances = [
+                { userId: 'a', balance: -cents / 100 },
+                { userId: 'b', balance: -0.07 },
+                { userId: 'c', balance: cents / 100 },
+                { userId: 'd', balance: 0.07 },
+            ];
+            const before = balances.map((value) => ({ ...value }));
+            const remaining = new Map(
+                balances.map((value) => [value.userId, Math.round(value.balance * 100)]),
+            );
+            for (const payment of simplifyDebts(balances)) {
+                expect(payment.amount).toBeGreaterThan(0);
+                expect(payment.fromUserId).not.toBe(payment.toUserId);
+                const paid = Math.round(payment.amount * 100);
+                remaining.set(payment.fromUserId, remaining.get(payment.fromUserId)! + paid);
+                remaining.set(payment.toUserId, remaining.get(payment.toUserId)! - paid);
+            }
+            expect([...remaining.values()]).toEqual([0, 0, 0, 0]);
+            expect(balances).toEqual(before);
+        },
+    );
+    it('includes historical members supplied by the caller and preserves cent-level overpayment', () => {
+        expect(
+            calculateNetBalances(
+                ['a', 'former'],
+                [{ paidByUserId: 'a', splits: [{ userId: 'former', amount: 0.1 }] }],
+                [{ fromUserId: 'former', toUserId: 'a', amount: 0.2 }],
+            ),
+        ).toEqual([
+            { userId: 'a', balance: -0.1 },
+            { userId: 'former', balance: 0.1 },
+        ]);
+    });
+    it('handles a payer outside the requested result set without NaN balances', () => {
+        expect(
+            calculateNetBalances(
+                ['a'],
+                [{ paidByUserId: 'historical', splits: [{ userId: 'a', amount: 1.25 }] }],
+                [],
+            ),
+        ).toEqual([{ userId: 'a', balance: -1.25 }]);
+    });
+    it('returns no settlements for an empty ledger', () => {
+        expect(calculateNetBalances([], [], [])).toEqual([]);
+        expect(simplifyDebts([])).toEqual([]);
+    });
+});

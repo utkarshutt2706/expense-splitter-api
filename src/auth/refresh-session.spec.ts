@@ -27,4 +27,21 @@ describe('refresh session helpers', () => {
         expect(readCookie('theme=dark', REFRESH_COOKIE_NAME)).toBeUndefined();
         expect(readCookie(undefined, REFRESH_COOKIE_NAME)).toBeUndefined();
     });
+
+    it('matches a known SHA-256 digest', () => {
+        expect(hashRefreshToken('abc')).toBe(
+            'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+        );
+        expect(hashRefreshToken('abd')).not.toBe(hashRefreshToken('abc'));
+    });
+    it.each([
+        ['broken; token=value', 'value'],
+        [' token = a=b== ', 'a=b=='],
+        ['token=first; token=second', 'first'],
+        ['token=', ''],
+        ['other_token=wrong; token=right', 'right'],
+        ['', undefined],
+    ])('parses cookie syntax %s', (header, expected) => {
+        expect(readCookie(header, 'token')).toBe(expected);
+    });
 });

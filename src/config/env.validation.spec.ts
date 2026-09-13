@@ -54,4 +54,28 @@ describe('validateEnv', () => {
             'Invalid environment configuration',
         );
     });
+
+    it.each([0, -1, 1.5, 'not-a-number', '', null])('rejects invalid port %p', (PORT) => {
+        expect(() => validateEnv({ ...validConfig, PORT })).toThrow(
+            'Invalid environment configuration',
+        );
+    });
+    it('accepts exact secret-length and port boundaries', () => {
+        expect(
+            validateEnv({
+                ...validConfig,
+                PORT: '1',
+                API_KEY: 'a'.repeat(16),
+                JWT_SECRET: 'b'.repeat(32),
+            }),
+        ).toMatchObject({ PORT: 1, API_KEY: 'a'.repeat(16), JWT_SECRET: 'b'.repeat(32) });
+    });
+    it.each(['DATABASE_URL', 'CORS_ALLOWED_ORIGINS', 'API_KEY', 'JWT_SECRET'])(
+        'rejects empty required config %s',
+        (key) => {
+            expect(() => validateEnv({ ...validConfig, [key]: '' })).toThrow(
+                'Invalid environment configuration',
+            );
+        },
+    );
 });

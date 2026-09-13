@@ -72,4 +72,32 @@ describe('HealthService', () => {
 
         await result;
     });
+
+    it('reports the frozen clock and floors process uptime', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-09-01T12:00:00Z'));
+        jest.spyOn(process, 'uptime').mockReturnValue(12.9);
+        expect(service.liveness()).toEqual({
+            status: 'ok',
+            timestamp: '2026-09-01T12:00:00.000Z',
+            uptimeSeconds: 12,
+            checks: { application: { status: 'up' } },
+        });
+        expect(queryRaw).not.toHaveBeenCalled();
+    });
+    it('cleans its timer after success and queries a constant SELECT', async () => {
+        jest.useFakeTimers();
+        await service.readiness();
+        expect(jest.getTimerCount()).toBe(0);
+        expect(queryRaw).toHaveBeenCalledWith(['SELECT 1']);
+    });
+    it('cleans its timer and returns a controlled error for non-Error rejection', async () => {
+        jest.useFakeTimers();
+        queryRaw.mockRejectedValue(null);
+        await expect(service.health()).rejects.toThrow('Database health check failed');
+        expect(jest.getTimerCount()).toBe(0);
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Health check failed: database is unavailable',
+            undefined,
+        );
+    });
 });

@@ -27,4 +27,16 @@ describe('password-hasher', () => {
     it('rejects a stored hash with an empty key segment', async () => {
         await expect(verifyPassword('anything', 'somesalt:')).resolves.toBe(false);
     });
+
+    it.each([':abcd', 'salt:a', 'salt:zz', 'salt:abcd', `salt:${'00'.repeat(65)}`])(
+        'rejects malformed stored key %s',
+        async (stored) => {
+            await expect(verifyPassword('password', stored)).resolves.toBe(false);
+        },
+    );
+    it('preserves Unicode passwords without normalizing distinct input', async () => {
+        const hash = await hashPassword('pässword🔑');
+        await expect(verifyPassword('pässword🔑', hash)).resolves.toBe(true);
+        await expect(verifyPassword('password🔑', hash)).resolves.toBe(false);
+    });
 });

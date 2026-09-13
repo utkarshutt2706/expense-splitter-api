@@ -72,4 +72,24 @@ describe('Auth endpoint rate limits', () => {
 
         expect(authService.register).toHaveBeenCalledTimes(5);
     });
+
+    it('limits refresh requests and counts requests even without a cookie', async () => {
+        for (let i = 0; i < 30; i++) {
+            await request(app.getHttpServer())
+                .post('/auth/refresh')
+                .set('X-Session-Request', 'ExpenseSplitter')
+                .expect(200);
+        }
+        const result = await request(app.getHttpServer())
+            .post('/auth/refresh')
+            .set('X-Session-Request', 'ExpenseSplitter')
+            .expect(429);
+        expect(result.body).toEqual({
+            error: {
+                code: 'TOO_MANY_REQUESTS',
+                message: 'Too many requests. Please try again later.',
+            },
+        });
+        expect(authService.refresh).not.toHaveBeenCalled();
+    });
 });

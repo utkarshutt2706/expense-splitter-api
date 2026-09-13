@@ -43,19 +43,36 @@ describe('calculateEqualSplit', () => {
     it('matches the seed data: 960 split 4-way with no remainder', () => {
         const result = calculateEqualSplit(960, ['a', 'b', 'c', 'd']);
 
-        expect(result.every((split) => split.amount === 240)).toBe(true);
+        expect(result).toEqual([
+            { userId: 'a', amount: 240 },
+            { userId: 'b', amount: 240 },
+            { userId: 'c', amount: 240 },
+            { userId: 'd', amount: 240 },
+        ]);
     });
 
     it('matches the seed data: 569 split 5-way with no remainder', () => {
         const result = calculateEqualSplit(569, ['a', 'b', 'c', 'd', 'e']);
 
-        expect(result.every((split) => split.amount === 113.8)).toBe(true);
+        expect(result).toEqual([
+            { userId: 'a', amount: 113.8 },
+            { userId: 'b', amount: 113.8 },
+            { userId: 'c', amount: 113.8 },
+            { userId: 'd', amount: 113.8 },
+            { userId: 'e', amount: 113.8 },
+        ]);
     });
 
     it('matches the seed data: 1647.45 split 5-way with no remainder', () => {
         const result = calculateEqualSplit(1647.45, ['a', 'b', 'c', 'd', 'e']);
 
-        expect(result.every((split) => split.amount === 329.49)).toBe(true);
+        expect(result).toEqual([
+            { userId: 'a', amount: 329.49 },
+            { userId: 'b', amount: 329.49 },
+            { userId: 'c', amount: 329.49 },
+            { userId: 'd', amount: 329.49 },
+            { userId: 'e', amount: 329.49 },
+        ]);
     });
 
     it('matches the seed data: 1293.68 split 3-way with largest-remainder rounding', () => {
@@ -103,7 +120,11 @@ describe('calculatePercentageSplit', () => {
             { userId: 'c', percentage: 33.34 },
         ]);
 
-        expect(sumAmounts(result)).toBe(100);
+        expect(result).toEqual([
+            { userId: 'a', amount: 33.33 },
+            { userId: 'b', amount: 33.33 },
+            { userId: 'c', amount: 33.34 },
+        ]);
     });
 });
 
@@ -127,7 +148,11 @@ describe('calculateSharesSplit', () => {
             { userId: 'c', shares: 1 },
         ]);
 
-        expect(sumAmounts(result)).toBe(100);
+        expect(result).toEqual([
+            { userId: 'a', amount: 33.34 },
+            { userId: 'b', amount: 33.33 },
+            { userId: 'c', amount: 33.33 },
+        ]);
     });
 });
 
@@ -181,5 +206,63 @@ describe('sumAmounts', () => {
         ];
 
         expect(sumAmounts(splits)).toBe(0.3);
+    });
+});
+
+describe('split conservation and allocation boundaries', () => {
+    it.each([0, 1, 2, 3, 7, 101, 999999])(
+        'conserves %i cents across unequal and zero weights',
+        (total) => {
+            const weights = [0, 1, 3, 7];
+            const result = distributeCentsByWeight(total, weights);
+            expect(result).toHaveLength(weights.length);
+            expect(result[0]).toBe(0);
+            expect(result.reduce((a, b) => a + b, 0)).toBe(total);
+            for (const amount of result) {
+                expect(Number.isInteger(amount)).toBe(true);
+                expect(amount).toBeGreaterThanOrEqual(0);
+            }
+            expect(weights).toEqual([0, 1, 3, 7]);
+        },
+    );
+    it('assigns scarce cents to the highest remainders with stable input-order ties', () => {
+        expect(distributeCentsByWeight(2, [1, 1, 1])).toEqual([1, 1, 0]);
+        expect(
+            calculatePercentageSplit(0.03, [
+                { userId: 'a', percentage: 25 },
+                { userId: 'b', percentage: 75 },
+            ]),
+        ).toEqual([
+            { userId: 'a', amount: 0.01 },
+            { userId: 'b', amount: 0.02 },
+        ]);
+    });
+    it('reconciles by identity rather than array position without changing inputs', () => {
+        const submitted = [
+            { userId: 'b', amount: 50 },
+            { userId: 'a', amount: 50 },
+        ];
+        expect(
+            splitsReconcile(
+                submitted,
+                [
+                    { userId: 'a', amount: 50 },
+                    { userId: 'b', amount: 50 },
+                ],
+                0,
+            ),
+        ).toBe(true);
+        expect(submitted).toEqual([
+            { userId: 'b', amount: 50 },
+            { userId: 'a', amount: 50 },
+        ]);
+    });
+    it('rejects an empty participant list through the zero-weight defense', () => {
+        expect(() => calculateEqualSplit(100, [])).toThrow(
+            'Total weight must be greater than zero',
+        );
+    });
+    it('sums an empty split to zero', () => {
+        expect(sumAmounts([])).toBe(0);
     });
 });

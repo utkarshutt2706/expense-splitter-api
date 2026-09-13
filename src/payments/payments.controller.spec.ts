@@ -19,6 +19,7 @@ describe('PaymentsController', () => {
         fromUserId: 'user-1',
         toUserId: 'user-2',
         amount: 500,
+        paidOn: '2026-07-23T10:00:00.000Z',
         createdAt: '2026-07-24T10:00:00.000Z',
     };
 

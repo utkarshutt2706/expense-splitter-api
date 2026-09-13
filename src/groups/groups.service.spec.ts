@@ -1,3 +1,4 @@
+import { runSerializableTransaction } from '../common/run-serializable-transaction';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Group, GroupMember, Prisma } from '@prisma/client';
 import { BalancesService } from '../balances/balances.service';
@@ -156,6 +157,34 @@ describe('GroupsService', () => {
     });
 
     describe('findAllSummaries', () => {
+        it('keeps the latest activity when later array entries are older or equal', async () => {
+            const newest = new Date('2026-08-15T10:00:00.123Z');
+            prisma.group.findMany.mockResolvedValue([
+                {
+                    ...group,
+                    expenses: [],
+                    payments: [newest, new Date('2026-08-01'), newest].map((date) => ({
+                        fromUserId: 'user-2',
+                        toUserId: 'user-1',
+                        amount: new Prisma.Decimal(1),
+                        createdAt: date,
+                    })),
+                },
+            ]);
+            await expect(service.findAllSummaries('user-1')).resolves.toEqual([
+                {
+                    id: group.id,
+                    name: group.name,
+                    memberIds: ['user-1', 'user-2'],
+                    memberCount: 2,
+                    currentUserBalance: -3,
+                    hasFinancialActivity: true,
+                    lastActivityAt: newest.toISOString(),
+                    createdAt: createdAt.toISOString(),
+                },
+            ]);
+        });
+
         it('returns canonical current-user balances and latest financial activity', async () => {
             prisma.group.findMany.mockResolvedValue([
                 {
@@ -381,4 +410,84 @@ describe('GroupsService', () => {
             await expect(service.update('group-1', { name: 'New Name' })).rejects.toThrow('boom');
         });
     });
+
+    it('stops after exactly three serialization conflicts and preserves the final error', async () => {
+        const error = knownRequestError('P2034');
+        prisma.$transaction.mockRejectedValue(error);
+        await expect(service.remove('group-1')).rejects.toBe(error);
+        expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+        expect(prisma.group.delete).not.toHaveBeenCalled();
+    });
+    it('does not retry other Prisma transaction failures', async () => {
+        const error = knownRequestError('P2024');
+        prisma.$transaction.mockRejectedValue(error);
+        await expect(service.remove('group-1')).rejects.toBe(error);
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+    it('normalizes non-Error transaction failures', async () => {
+        prisma.$transaction.mockRejectedValue(null);
+        await expect(service.remove('group-1')).rejects.toThrow('Unexpected error');
+    });
+    it('uses a distinct transaction client for both balance check and deletion', async () => {
+        const tx = { group: { delete: jest.fn().mockResolvedValue(group) } };
+        prisma.$transaction.mockImplementation((operation: (client: typeof tx) => Promise<void>) =>
+            operation(tx),
+        );
+        await service.remove('group-1');
+        expect(balancesService.getGroupBalances).toHaveBeenCalledWith('group-1', tx);
+        expect(tx.group.delete).toHaveBeenCalledWith({ where: { id: 'group-1' } });
+        expect(prisma.group.delete).not.toHaveBeenCalled();
+    });
+    it('allows a settled member to leave while a retained member remains unsettled', async () => {
+        prisma.group.findUnique
+            .mockResolvedValueOnce(group)
+            .mockResolvedValueOnce({ ...group, members: [members[1]] });
+        balancesService.getGroupBalances.mockResolvedValue({
+            balances: [
+                { userId: 'user-1', balance: 0 },
+                { userId: 'user-2', balance: -10 },
+            ],
+            settlements: [],
+        });
+        await expect(service.update('group-1', { memberIds: ['user-2'] })).resolves.toEqual({
+            id: 'group-1',
+            name: group.name,
+            memberIds: ['user-2'],
+            createdAt: createdAt.toISOString(),
+        });
+        expect(prisma.groupMember.updateMany).toHaveBeenCalledTimes(1);
+    });
+    it('reports a missing final record rather than returning an incomplete response', async () => {
+        prisma.group.findUnique.mockResolvedValueOnce(group).mockResolvedValueOnce(null);
+        await expect(service.update('group-1', {})).rejects.toThrow('Group group-1 not found');
+    });
+    it('does not rename or read a result after an upsert failure', async () => {
+        prisma.group.findUnique.mockResolvedValue(group);
+        const error = new Error('upsert failed');
+        prisma.groupMember.upsert.mockRejectedValue(error);
+        await expect(
+            service.update('group-1', { name: 'Updated', memberIds: ['user-1', 'user-2', 'new'] }),
+        ).rejects.toBe(error);
+        expect(prisma.group.update).not.toHaveBeenCalled();
+        expect(prisma.group.findUnique).toHaveBeenCalledTimes(1);
+    });
+    it('maps a not-found create failure without a supplied group id', async () => {
+        prisma.group.create.mockRejectedValue(knownRequestError('P2025'));
+        await expect(
+            service.create('user-1', { name: 'Trip', memberIds: ['user-1'] }),
+        ).rejects.toThrow('Group not found');
+    });
+
+    it.each([0, -1, NaN])(
+        'rejects an unusable transaction attempt budget %p without executing writes',
+        async (attempts) => {
+            const transaction = jest.fn();
+            const operation = jest.fn();
+            await expect(
+                runSerializableTransaction({ $transaction: transaction }, operation, attempts),
+            ).rejects.toThrow('Serializable transaction retry limit exceeded');
+            expect(transaction).not.toHaveBeenCalled();
+            expect(operation).not.toHaveBeenCalled();
+        },
+    );
 });

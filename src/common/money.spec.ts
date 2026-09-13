@@ -19,3 +19,12 @@ describe('fromCents', () => {
         expect(fromCents(1050.4)).toBe(10.5);
     });
 });
+
+describe('signed monetary boundaries', () => {
+    it.each([0, 0.01, -0.01, 123.45, -123.45, 9999999999.99])(
+        'round trips %p within the persisted decimal range',
+        (amount) => {
+            expect(fromCents(toCents(amount))).toBe(amount);
+        },
+    );
+});

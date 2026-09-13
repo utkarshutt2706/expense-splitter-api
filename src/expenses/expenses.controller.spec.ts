@@ -24,6 +24,7 @@ describe('ExpensesController', () => {
         createdByUserId: 'user-1',
         splitType: SplitType.equal,
         splits: [{ userId: 'user-1', amount: 1040 }],
+        paidOn: '2026-07-23T10:00:00.000Z',
         createdAt: '2026-07-23T10:00:00.000Z',
     };
 
