@@ -7,10 +7,7 @@ updates:
     groups:
       nestjs-framework:
         patterns:
-          - "@nestjs/common"
-          - "@nestjs/core"
-          - "@nestjs/platform-*"
-          - "@nestjs/testing"
+          - '@nestjs/*'
   - package-ecosystem: github-actions
     directory: /
     schedule:
