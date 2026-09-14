@@ -26,6 +26,16 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Require authenticated PR analysis
+        env:
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ "$IS_FORK" = "true" ]; then
+            echo "::error::This PR requires Sonar analysis. Fork secrets are unavailable; use a reviewed branch in this repository."
+            exit 1
+          fi
+      - name: Test Sonar issue policy
+        run: node --test scripts/check-sonar-issues.node-test.mjs
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm exec prisma generate
       - run: >-
@@ -177,11 +187,25 @@ jobs:
                 body,
               });
             }
-      - uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
-        # Fork PRs do not receive SONAR_TOKEN. Tests still run above; only the scan is skipped.
+      - name: Analyze with Sonar
+        id: scan
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        # Fork PRs are blocked above because they cannot run authenticated analysis.
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
-          args: -Dsonar.qualitygate.wait=true
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Require zero unresolved Sonar PR issues
+        if: >-
+          !cancelled() && github.event_name == 'pull_request' &&
+          (steps.scan.outcome == 'success' || steps.scan.outcome == 'failure')
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-sonar-issues.mjs
