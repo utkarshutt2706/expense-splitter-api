@@ -72,8 +72,9 @@ The public `/liveness` endpoint checks only that the API process can respond. Th
 public `/readiness` endpoint verifies that the API can serve traffic by checking its
 required database dependency. The public `/health` endpoint is the backward-compatible
 aggregate health check. Readiness and health return `503 Service Unavailable` if
-PostgreSQL cannot be queried within three seconds. Render uses `/readiness` as its
-platform health-check path; external keep-awake monitors should use `/liveness`.
+PostgreSQL cannot be queried within three seconds. Render uses `/liveness` as its
+platform health-check path so its frequent probes do not keep PostgreSQL active.
+Use `/readiness` only when a database dependency check is explicitly required.
 
 ## Local development
 
