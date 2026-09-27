@@ -223,6 +223,54 @@ describe('simplifyDebts', () => {
         ]);
     });
 
+    it('keeps the other suggested payments unchanged after one member pays part of a settlement', () => {
+        const memberIds = ['a', 'b', 'c', 'd'];
+        const expenses = [
+            {
+                paidByUserId: 'c',
+                splits: [{ userId: 'a', amount: 90 }],
+            },
+            {
+                paidByUserId: 'd',
+                splits: [
+                    { userId: 'a', amount: 10 },
+                    { userId: 'b', amount: 60 },
+                ],
+            },
+        ];
+
+        const balancesBeforePayment = calculateNetBalances(memberIds, expenses, []);
+        expect(simplifyDebts(balancesBeforePayment)).toEqual([
+            { fromUserId: 'a', toUserId: 'c', amount: 90 },
+            { fromUserId: 'a', toUserId: 'd', amount: 10 },
+            { fromUserId: 'b', toUserId: 'd', amount: 60 },
+        ]);
+
+        const balancesAfterPayment = calculateNetBalances(memberIds, expenses, [
+            { fromUserId: 'a', toUserId: 'c', amount: 50 },
+        ]);
+        expect(simplifyDebts(balancesAfterPayment)).toEqual([
+            { fromUserId: 'a', toUserId: 'c', amount: 40 },
+            { fromUserId: 'a', toUserId: 'd', amount: 10 },
+            { fromUserId: 'b', toUserId: 'd', amount: 60 },
+        ]);
+    });
+
+    it('uses participant IDs for stable ordering when balances change or inputs arrive in another order', () => {
+        const balances = [
+            { userId: 'd', balance: 70 },
+            { userId: 'b', balance: -60 },
+            { userId: 'c', balance: 90 },
+            { userId: 'a', balance: -100 },
+        ];
+
+        expect(simplifyDebts(balances)).toEqual([
+            { fromUserId: 'a', toUserId: 'c', amount: 90 },
+            { fromUserId: 'a', toUserId: 'd', amount: 10 },
+            { fromUserId: 'b', toUserId: 'd', amount: 60 },
+        ]);
+    });
+
     it('ignores members who are already settled', () => {
         const result = simplifyDebts([
             { userId: 'a', balance: -50 },

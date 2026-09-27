@@ -58,12 +58,15 @@ export function simplifyDebts(balances: NetBalance[]): SettlementTransaction[] {
     const creditors = balances
         .filter((entry) => toCents(entry.balance) > 0)
         .map((entry) => ({ userId: entry.userId, cents: toCents(entry.balance) }))
-        .sort((a, b) => b.cents - a.cents);
+        // Keep participant order stable as balances change after each payment.
+        // Sorting by amount can reorder the greedy pairing and make unrelated
+        // suggested payments appear to change between screenshots.
+        .sort((a, b) => a.userId.localeCompare(b.userId));
 
     const debtors = balances
         .filter((entry) => toCents(entry.balance) < 0)
         .map((entry) => ({ userId: entry.userId, cents: -toCents(entry.balance) }))
-        .sort((a, b) => b.cents - a.cents);
+        .sort((a, b) => a.userId.localeCompare(b.userId));
 
     const transactions: SettlementTransaction[] = [];
     let i = 0;
