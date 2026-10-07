@@ -91,8 +91,8 @@ importers:
         specifier: ^7.0.0
         version: 7.2.1
       dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
+        specifier: ^18.0.5
+        version: 18.0.5
       eslint:
         specifier: ^10.11.0
         version: 10.11.0(jiti@2.7.0)(supports-color@8.1.1)
@@ -2084,6 +2084,11 @@ packages:
 
   dotenv@18.0.3:
     resolution: {integrity: sha512-/8CJTyL817qPnfbQrJgOEcrU3fDrJkRIoXBE566wHuvIXKOCHUZhPqGPbCPi9SogjdGnreF0TlvnTgK6J/8zpA==}
+    engines: {node: '>=12'}
+    hasBin: true
+
+  dotenv@18.0.5:
+    resolution: {integrity: sha512-aBrGvt6KhjxbEnatqMWOMidftwsrCiCvqh1yNIGB9QyF0J+VcWkKDMsvYOEm7ZS82oiV+BT1sTOtIlAmUlTpwQ==}
     engines: {node: '>=12'}
     hasBin: true
 
@@ -6012,6 +6017,8 @@ snapshots:
   dotenv@17.4.2: {}
 
   dotenv@18.0.3: {}
+
+  dotenv@18.0.5: {}
 
   dunder-proto@1.0.1:
     dependencies:
